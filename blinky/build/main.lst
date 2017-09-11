@@ -1,0 +1,382 @@
+ARM GAS  /tmp/ccy3AgJK.s 			page 1
+
+
+   1              		.syntax unified
+   2              		.cpu cortex-m4
+   3              		.eabi_attribute 27, 1
+   4              		.eabi_attribute 28, 1
+   5              		.fpu fpv4-sp-d16
+   6              		.eabi_attribute 20, 1
+   7              		.eabi_attribute 21, 1
+   8              		.eabi_attribute 23, 3
+   9              		.eabi_attribute 24, 1
+  10              		.eabi_attribute 25, 1
+  11              		.eabi_attribute 26, 1
+  12              		.eabi_attribute 30, 1
+  13              		.eabi_attribute 34, 1
+  14              		.eabi_attribute 18, 4
+  15              		.thumb
+  16              		.file	"main.c"
+  17              		.text
+  18              	.Ltext0:
+  19              		.cfi_sections	.debug_frame
+  20              		.section	.text.main,"ax",%progbits
+  21              		.align	2
+  22              		.global	main
+  23              		.thumb
+  24              		.thumb_func
+  26              	main:
+  27              	.LFB123:
+  28              		.file 1 "src/main.c"
+   1:src/main.c    **** /**
+   2:src/main.c    ****   ******************************************************************************
+   3:src/main.c    ****   * @file    SysTick/main.c
+   4:src/main.c    ****   * @author  Moeiz Riaz
+   5:src/main.c    ****   * @version V1.0.0
+   6:src/main.c    ****   * @date    9-September-2017
+   7:src/main.c    ****   * @brief   Main program body
+   8:src/main.c    ****   ******************************************************************************
+   9:src/main.c    **** 
+  10:src/main.c    **** */
+  11:src/main.c    **** 
+  12:src/main.c    **** /* Includes ------------------------------------------------------------------*/
+  13:src/main.c    **** #include "main.h"
+  14:src/main.c    **** 
+  15:src/main.c    **** 
+  16:src/main.c    **** 
+  17:src/main.c    **** /* Private typedef -----------------------------------------------------------*/
+  18:src/main.c    **** /* Private define ------------------------------------------------------------*/
+  19:src/main.c    **** /* Private macro -------------------------------------------------------------*/
+  20:src/main.c    **** /* Private variables ---------------------------------------------------------*/
+  21:src/main.c    **** /* Private function prototypes -----------------------------------------------*/
+  22:src/main.c    **** /* Private functions ---------------------------------------------------------*/
+  23:src/main.c    **** 
+  24:src/main.c    **** /**
+  25:src/main.c    ****   * @brief   Main program
+  26:src/main.c    ****   * @param  None
+  27:src/main.c    ****   * @retval None
+  28:src/main.c    ****   */
+  29:src/main.c    **** 
+  30:src/main.c    **** #define PORTD_15 0x00008000
+ARM GAS  /tmp/ccy3AgJK.s 			page 2
+
+
+  31:src/main.c    **** #define PORTD_14 0x00004000
+  32:src/main.c    **** #define PORTD_13 0x00002000
+  33:src/main.c    **** #define PORTD_12 0x00001000
+  34:src/main.c    **** #define PORTD_ALL 0x0000F000
+  35:src/main.c    **** 
+  36:src/main.c    **** int main(void)
+  37:src/main.c    **** {
+  29              		.loc 1 37 0
+  30              		.cfi_startproc
+  31              		@ args = 0, pretend = 0, frame = 0
+  32              		@ frame_needed = 0, uses_anonymous_args = 0
+  33              		@ link register save eliminated.
+  38:src/main.c    ****   /*!< At this stage the microcontroller clock setting is already configured,
+  39:src/main.c    ****        this is done through SystemInit() function which is called from startup
+  40:src/main.c    ****        file (startup_stm32f4xx.s) before to branch to application main.
+  41:src/main.c    ****        To reconfigure the default setting of SystemInit() function, refer to
+  42:src/main.c    ****         system_stm32f4xx.c file
+  43:src/main.c    ****      */
+  44:src/main.c    **** 
+  45:src/main.c    ****   /* Enable Clock */
+  46:src/main.c    ****   RCC->AHB1ENR |= RCC_AHB1ENR_GPIODEN;
+  34              		.loc 1 46 0
+  35 0000 414A     		ldr	r2, .L23
+  36 0002 136B     		ldr	r3, [r2, #48]
+  37 0004 43F00803 		orr	r3, r3, #8
+  38 0008 1363     		str	r3, [r2, #48]
+  47:src/main.c    **** 
+  48:src/main.c    **** 
+  49:src/main.c    ****   GPIOD->MODER |= 0x55000000;/* LED 5-8 are on GPIOD Pins 12-15 */
+  39              		.loc 1 49 0
+  40 000a 404B     		ldr	r3, .L23+4
+  41 000c 1A68     		ldr	r2, [r3]
+  42 000e 42F0AA42 		orr	r2, r2, #1426063360
+  43 0012 1A60     		str	r2, [r3]
+  50:src/main.c    ****   GPIOD->OTYPER &= ~0x0000F000; /*Configure as output open-drain */
+  44              		.loc 1 50 0
+  45 0014 5A68     		ldr	r2, [r3, #4]
+  46 0016 22F47042 		bic	r2, r2, #61440
+  47 001a 5A60     		str	r2, [r3, #4]
+  51:src/main.c    ****   GPIOD->OSPEEDR |=0xAA000000; /* Configure as high speed */
+  48              		.loc 1 51 0
+  49 001c 9A68     		ldr	r2, [r3, #8]
+  50 001e 42F02A42 		orr	r2, r2, #-1442840576
+  51 0022 9A60     		str	r2, [r3, #8]
+  52:src/main.c    ****   GPIOD->PUPDR &= ~0x00000000;
+  52              		.loc 1 52 0
+  53 0024 DA68     		ldr	r2, [r3, #12]
+  54 0026 DA60     		str	r2, [r3, #12]
+  55              	.LVL0:
+  56              	.L22:
+  53:src/main.c    **** 
+  54:src/main.c    ****   unsigned int delay =0;
+  55:src/main.c    **** 
+  56:src/main.c    ****   /* Infinite loop */
+  57:src/main.c    ****   while (1)
+  58:src/main.c    ****   {
+  59:src/main.c    ****     GPIOD->ODR |=PORTD_12;
+ARM GAS  /tmp/ccy3AgJK.s 			page 3
+
+
+  57              		.loc 1 59 0
+  58 0028 384A     		ldr	r2, .L23+4
+  59 002a 5369     		ldr	r3, [r2, #20]
+  60 002c 43F48053 		orr	r3, r3, #4096
+  61 0030 5361     		str	r3, [r2, #20]
+  62              	.LVL1:
+  60:src/main.c    ****     for(delay= 0; delay < 1066667; delay++);
+  63              		.loc 1 60 0
+  64 0032 0023     		movs	r3, #0
+  65 0034 00E0     		b	.L2
+  66              	.LVL2:
+  67              	.L3:
+  68              		.loc 1 60 0 is_stmt 0 discriminator 3
+  69 0036 0133     		adds	r3, r3, #1
+  70              	.LVL3:
+  71              	.L2:
+  72              		.loc 1 60 0 discriminator 1
+  73 0038 354A     		ldr	r2, .L23+8
+  74 003a 9342     		cmp	r3, r2
+  75 003c FBD9     		bls	.L3
+  61:src/main.c    ****     GPIOD->ODR &=~PORTD_12;
+  76              		.loc 1 61 0 is_stmt 1
+  77 003e 334A     		ldr	r2, .L23+4
+  78 0040 5369     		ldr	r3, [r2, #20]
+  79              	.LVL4:
+  80 0042 23F48053 		bic	r3, r3, #4096
+  81 0046 5361     		str	r3, [r2, #20]
+  82              	.LVL5:
+  62:src/main.c    ****     for(delay= 0; delay < 1066667; delay++);
+  83              		.loc 1 62 0
+  84 0048 0023     		movs	r3, #0
+  85 004a 00E0     		b	.L4
+  86              	.LVL6:
+  87              	.L5:
+  88              		.loc 1 62 0 is_stmt 0 discriminator 3
+  89 004c 0133     		adds	r3, r3, #1
+  90              	.LVL7:
+  91              	.L4:
+  92              		.loc 1 62 0 discriminator 1
+  93 004e 304A     		ldr	r2, .L23+8
+  94 0050 9342     		cmp	r3, r2
+  95 0052 FBD9     		bls	.L5
+  63:src/main.c    ****     GPIOD->ODR |=PORTD_13;
+  96              		.loc 1 63 0 is_stmt 1
+  97 0054 2D4A     		ldr	r2, .L23+4
+  98 0056 5369     		ldr	r3, [r2, #20]
+  99              	.LVL8:
+ 100 0058 43F40053 		orr	r3, r3, #8192
+ 101 005c 5361     		str	r3, [r2, #20]
+ 102              	.LVL9:
+  64:src/main.c    ****     for(delay= 0; delay < 1066667; delay++);
+ 103              		.loc 1 64 0
+ 104 005e 0023     		movs	r3, #0
+ 105 0060 00E0     		b	.L6
+ 106              	.LVL10:
+ 107              	.L7:
+ 108              		.loc 1 64 0 is_stmt 0 discriminator 3
+ARM GAS  /tmp/ccy3AgJK.s 			page 4
+
+
+ 109 0062 0133     		adds	r3, r3, #1
+ 110              	.LVL11:
+ 111              	.L6:
+ 112              		.loc 1 64 0 discriminator 1
+ 113 0064 2A4A     		ldr	r2, .L23+8
+ 114 0066 9342     		cmp	r3, r2
+ 115 0068 FBD9     		bls	.L7
+  65:src/main.c    ****     GPIOD->ODR &=~PORTD_13;
+ 116              		.loc 1 65 0 is_stmt 1
+ 117 006a 284A     		ldr	r2, .L23+4
+ 118 006c 5369     		ldr	r3, [r2, #20]
+ 119              	.LVL12:
+ 120 006e 23F40053 		bic	r3, r3, #8192
+ 121 0072 5361     		str	r3, [r2, #20]
+ 122              	.LVL13:
+  66:src/main.c    ****     for(delay= 0; delay < 1066667; delay++);
+ 123              		.loc 1 66 0
+ 124 0074 0023     		movs	r3, #0
+ 125 0076 00E0     		b	.L8
+ 126              	.LVL14:
+ 127              	.L9:
+ 128              		.loc 1 66 0 is_stmt 0 discriminator 3
+ 129 0078 0133     		adds	r3, r3, #1
+ 130              	.LVL15:
+ 131              	.L8:
+ 132              		.loc 1 66 0 discriminator 1
+ 133 007a 254A     		ldr	r2, .L23+8
+ 134 007c 9342     		cmp	r3, r2
+ 135 007e FBD9     		bls	.L9
+  67:src/main.c    ****     GPIOD->ODR |=PORTD_14;
+ 136              		.loc 1 67 0 is_stmt 1
+ 137 0080 224A     		ldr	r2, .L23+4
+ 138 0082 5369     		ldr	r3, [r2, #20]
+ 139              	.LVL16:
+ 140 0084 43F48043 		orr	r3, r3, #16384
+ 141 0088 5361     		str	r3, [r2, #20]
+ 142              	.LVL17:
+  68:src/main.c    ****     for(delay= 0; delay < 1066667; delay++);
+ 143              		.loc 1 68 0
+ 144 008a 0023     		movs	r3, #0
+ 145 008c 00E0     		b	.L10
+ 146              	.LVL18:
+ 147              	.L11:
+ 148              		.loc 1 68 0 is_stmt 0 discriminator 3
+ 149 008e 0133     		adds	r3, r3, #1
+ 150              	.LVL19:
+ 151              	.L10:
+ 152              		.loc 1 68 0 discriminator 1
+ 153 0090 1F4A     		ldr	r2, .L23+8
+ 154 0092 9342     		cmp	r3, r2
+ 155 0094 FBD9     		bls	.L11
+  69:src/main.c    ****     GPIOD->ODR &=~PORTD_14;
+ 156              		.loc 1 69 0 is_stmt 1
+ 157 0096 1D4A     		ldr	r2, .L23+4
+ 158 0098 5369     		ldr	r3, [r2, #20]
+ 159              	.LVL20:
+ 160 009a 23F48043 		bic	r3, r3, #16384
+ARM GAS  /tmp/ccy3AgJK.s 			page 5
+
+
+ 161 009e 5361     		str	r3, [r2, #20]
+ 162              	.LVL21:
+  70:src/main.c    ****     for(delay= 0; delay < 1066667; delay++);
+ 163              		.loc 1 70 0
+ 164 00a0 0023     		movs	r3, #0
+ 165 00a2 00E0     		b	.L12
+ 166              	.LVL22:
+ 167              	.L13:
+ 168              		.loc 1 70 0 is_stmt 0 discriminator 3
+ 169 00a4 0133     		adds	r3, r3, #1
+ 170              	.LVL23:
+ 171              	.L12:
+ 172              		.loc 1 70 0 discriminator 1
+ 173 00a6 1A4A     		ldr	r2, .L23+8
+ 174 00a8 9342     		cmp	r3, r2
+ 175 00aa FBD9     		bls	.L13
+  71:src/main.c    ****     GPIOD->ODR |=PORTD_15;
+ 176              		.loc 1 71 0 is_stmt 1
+ 177 00ac 174A     		ldr	r2, .L23+4
+ 178 00ae 5369     		ldr	r3, [r2, #20]
+ 179              	.LVL24:
+ 180 00b0 43F40043 		orr	r3, r3, #32768
+ 181 00b4 5361     		str	r3, [r2, #20]
+ 182              	.LVL25:
+  72:src/main.c    ****     for(delay= 0; delay < 1066667; delay++);
+ 183              		.loc 1 72 0
+ 184 00b6 0023     		movs	r3, #0
+ 185 00b8 00E0     		b	.L14
+ 186              	.LVL26:
+ 187              	.L15:
+ 188              		.loc 1 72 0 is_stmt 0 discriminator 3
+ 189 00ba 0133     		adds	r3, r3, #1
+ 190              	.LVL27:
+ 191              	.L14:
+ 192              		.loc 1 72 0 discriminator 1
+ 193 00bc 144A     		ldr	r2, .L23+8
+ 194 00be 9342     		cmp	r3, r2
+ 195 00c0 FBD9     		bls	.L15
+  73:src/main.c    ****     GPIOD->ODR &=~PORTD_15;
+ 196              		.loc 1 73 0 is_stmt 1
+ 197 00c2 124A     		ldr	r2, .L23+4
+ 198 00c4 5369     		ldr	r3, [r2, #20]
+ 199              	.LVL28:
+ 200 00c6 23F40043 		bic	r3, r3, #32768
+ 201 00ca 5361     		str	r3, [r2, #20]
+ 202              	.LVL29:
+  74:src/main.c    **** 
+  75:src/main.c    ****     for(delay= 0; delay < 1066667; delay++);
+ 203              		.loc 1 75 0
+ 204 00cc 0023     		movs	r3, #0
+ 205 00ce 00E0     		b	.L16
+ 206              	.LVL30:
+ 207              	.L17:
+ 208              		.loc 1 75 0 is_stmt 0 discriminator 3
+ 209 00d0 0133     		adds	r3, r3, #1
+ 210              	.LVL31:
+ 211              	.L16:
+ARM GAS  /tmp/ccy3AgJK.s 			page 6
+
+
+ 212              		.loc 1 75 0 discriminator 1
+ 213 00d2 0F4A     		ldr	r2, .L23+8
+ 214 00d4 9342     		cmp	r3, r2
+ 215 00d6 FBD9     		bls	.L17
+  76:src/main.c    **** 
+  77:src/main.c    ****     GPIOD->ODR |=PORTD_ALL;
+ 216              		.loc 1 77 0 is_stmt 1
+ 217 00d8 0C4A     		ldr	r2, .L23+4
+ 218 00da 5369     		ldr	r3, [r2, #20]
+ 219              	.LVL32:
+ 220 00dc 43F47043 		orr	r3, r3, #61440
+ 221 00e0 5361     		str	r3, [r2, #20]
+ 222              	.LVL33:
+  78:src/main.c    **** 
+  79:src/main.c    ****     for(delay= 0; delay < 1066667; delay++);
+ 223              		.loc 1 79 0
+ 224 00e2 0023     		movs	r3, #0
+ 225 00e4 00E0     		b	.L18
+ 226              	.LVL34:
+ 227              	.L19:
+ 228              		.loc 1 79 0 is_stmt 0 discriminator 3
+ 229 00e6 0133     		adds	r3, r3, #1
+ 230              	.LVL35:
+ 231              	.L18:
+ 232              		.loc 1 79 0 discriminator 1
+ 233 00e8 094A     		ldr	r2, .L23+8
+ 234 00ea 9342     		cmp	r3, r2
+ 235 00ec FBD9     		bls	.L19
+  80:src/main.c    ****     GPIOD->ODR &=~PORTD_ALL;
+ 236              		.loc 1 80 0 is_stmt 1
+ 237 00ee 074A     		ldr	r2, .L23+4
+ 238 00f0 5369     		ldr	r3, [r2, #20]
+ 239              	.LVL36:
+ 240 00f2 23F47043 		bic	r3, r3, #61440
+ 241 00f6 5361     		str	r3, [r2, #20]
+ 242              	.LVL37:
+  81:src/main.c    ****     for(delay= 0; delay < 1066667; delay++);
+ 243              		.loc 1 81 0
+ 244 00f8 0023     		movs	r3, #0
+ 245 00fa 00E0     		b	.L20
+ 246              	.LVL38:
+ 247              	.L21:
+ 248              		.loc 1 81 0 is_stmt 0 discriminator 3
+ 249 00fc 0133     		adds	r3, r3, #1
+ 250              	.LVL39:
+ 251              	.L20:
+ 252              		.loc 1 81 0 discriminator 1
+ 253 00fe 044A     		ldr	r2, .L23+8
+ 254 0100 9342     		cmp	r3, r2
+ 255 0102 FBD9     		bls	.L21
+ 256 0104 90E7     		b	.L22
+ 257              	.L24:
+ 258 0106 00BF     		.align	2
+ 259              	.L23:
+ 260 0108 00380240 		.word	1073887232
+ 261 010c 000C0240 		.word	1073875968
+ 262 0110 AA461000 		.word	1066666
+ARM GAS  /tmp/ccy3AgJK.s 			page 7
+
+
+ 263              		.cfi_endproc
+ 264              	.LFE123:
+ 266              		.text
+ 267              	.Letext0:
+ 268              		.file 2 "/usr/include/newlib/machine/_default_types.h"
+ 269              		.file 3 "/usr/include/newlib/sys/_stdint.h"
+ 270              		.file 4 "Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f407xx.h"
+ 271              		.file 5 "Drivers/CMSIS/Include/core_cm4.h"
+ARM GAS  /tmp/ccy3AgJK.s 			page 8
+
+
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 main.c
+     /tmp/ccy3AgJK.s:21     .text.main:0000000000000000 $t
+     /tmp/ccy3AgJK.s:26     .text.main:0000000000000000 main
+     /tmp/ccy3AgJK.s:260    .text.main:0000000000000108 $d
+                     .debug_frame:0000000000000010 $d
+
+NO UNDEFINED SYMBOLS
