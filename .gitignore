@@ -89,7 +89,6 @@ dkms.conf
 .nfs*
 
 ## Other stuff
-./blinky/build
-./template_hal/build
+**/build
 
 # End of https://www.gitignore.io/api/c,c++,linux
