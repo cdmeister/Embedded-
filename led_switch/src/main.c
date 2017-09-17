@@ -27,6 +27,14 @@
   * @retval None
   */
 
+#define PORTD_15 0x00008000
+#define PORTD_14 0x00004000
+#define PORTD_13 0x00002000
+#define PORTD_12 0x00001000
+#define PORTD_ALL 0x0000F000
+
+#define PORTA_0 0x00000000
+
 int main(void)
 {
   /*!< At this stage the microcontroller clock setting is already configured,
@@ -36,6 +44,59 @@ int main(void)
         system_stm32f4xx.c file
      */
 
+  /** In order to work with pins, the RCC(Reset and Clock Control) must be
+    * enabled
+    */
+
+  RCC->AHB1ENR |= RCC_AHB1ENR_GPIODEN; /* for Leds 5-6 */
+  RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN; /* for user button 1*/
+
+  /* Setup the Pin for GPIOA - Push */
+  GPIOA->MODER |= 0x00000000; /* Input Mode */
+  GPIOA->OTYPER |= 0x00000001; /*Configure as output open-drain*/
+  GPIOA->OSPEEDR |=0x00000002; /*Configure as high speed*/
+  GPIOA->PUPDR |= 0x00000002; /*Configure as pull-down */
+
+  /* Setup the Pin for GPIOD - LEDS on the board */
+  GPIOD->MODER |= 0x55000000;/* LED 5-8 are on GPIOD Pins 12-15 */
+  GPIOD->OTYPER |= 0x00000000; /*Configure as output push-pull */
+  GPIOD->OSPEEDR |=0xAA000000; /* Configure as high speed */
+  GPIOD->PUPDR |= 0x00000000; /*No pull*/
+
+
+
+  unsigned int i = 0;
+  unsigned int index= 0;
+  while(1) {
+    /** If you hold down button, it will cycle,rate if controled by
+      * for loop at the end
+      */
+    if(GPIOA->IDR & 0x1){
+      if (i > 3) i = 0;
+      switch(i){
+        case 0:
+          GPIOD->ODR = PORTD_12;
+          break;
+        case 1:
+          GPIOD->ODR = PORTD_13;
+          break;
+        case 2:
+          GPIOD->ODR = PORTD_14;
+          break;
+        case 3:
+          GPIOD->ODR = PORTD_15;
+          break;
+        default:
+          GPIOD->ODR = PORTD_ALL;
+          break;
+      }
+
+      i++;
+      for (index = 0; index < 500000; index++);/* Debouncing*/
+    }
+
+
+  }
 
   return 0;
 }
