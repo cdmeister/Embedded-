@@ -51,9 +51,9 @@ int main(void)
   RCC->AHB1ENR |= RCC_AHB1ENR_GPIODEN; /* for Leds 5-6 */
   RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN; /* for user button 1*/
 
-  /* Setup the Pin for GPIOA - Push */
+  /* Setup the Pin for GPIOA - Push button */
   GPIOA->MODER |= 0x00000000; /* Input Mode */
-  GPIOA->OTYPER |= 0x00000001; /*Configure as output open-drain*/
+  GPIOA->OTYPER |= 0x00000000; /*Configure as output as default push-pull*/
   GPIOA->OSPEEDR |=0x00000002; /*Configure as high speed*/
   GPIOA->PUPDR |= 0x00000002; /*Configure as pull-down */
 
@@ -61,7 +61,7 @@ int main(void)
   GPIOD->MODER |= 0x55000000;/* LED 5-8 are on GPIOD Pins 12-15 */
   GPIOD->OTYPER |= 0x00000000; /*Configure as output push-pull */
   GPIOD->OSPEEDR |=0xAA000000; /* Configure as high speed */
-  GPIOD->PUPDR |= 0x00000000; /*No pull*/
+  GPIOD->PUPDR |= 0x00000000; /*No pull-up or pull down*/
 
 
 

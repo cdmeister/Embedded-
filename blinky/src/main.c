@@ -46,10 +46,27 @@ int main(void)
   RCC->AHB1ENR |= RCC_AHB1ENR_GPIODEN;
 
 
-  GPIOD->MODER |= 0x55000000;/* LED 5-8 are on GPIOD Pins 12-15 */
-  GPIOD->OTYPER &= ~0x0000F000; /*Configure as output open-drain */
-  GPIOD->OSPEEDR |=0xAA000000; /* Configure as high speed */
-  GPIOD->PUPDR &= ~0x00000000;
+  // Set mode of all pins as digital output
+  // 00 = digital input       01 = digital output
+  // 10 = alternate function  11 = analog (default)
+  GPIOD->MODER &= ~(0xFF<<24); /* Clear mode bits */
+  GPIOD->MODER |= 85UL<<24;/* LED 5-8 are on GPIOD Pins 12-15 */
+
+  // Set output type of all pins as push-pull
+  // 0 = push-pull (default)
+  // 1 = open-drain
+  GPIOD->OTYPER &= ~(0xF<<3); /*Configure as output open-drain */
+
+  // Set output speed of all pins as high
+  // 00 = Low speed           01 = Medium speed
+  // 10 = Fast speed          11 = High speed
+  GPIOD->OSPEEDR &=~(0xFF<<3); /* Configure as high speed */
+  GPIOD->OSPEEDR |= (0xFF<<3);
+
+  // Set all pins as no pull-up, no pull-down
+  // 00 = no pull-up, no pull-down    01 = pull-up
+  // 10 = pull-down,                  11 = reserved
+  GPIOD->PUPDR &= ~(0xFF<<3); /*no pul-up, no pull-down*/
 
   unsigned int delay =0;
 
