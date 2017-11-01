@@ -90,5 +90,7 @@ dkms.conf
 
 ## Other stuff
 **/build
+*.swp
+*.swo
 
 # End of https://www.gitignore.io/api/c,c++,linux
