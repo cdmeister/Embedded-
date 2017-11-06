@@ -92,7 +92,7 @@ int main(void)
       }
 
       i++;
-      for (index = 0; index < 500000; index++);/* Debouncing*/
+      for (index = 0; index < 5000000; index++);/* Debouncing*/
     }
 
 
