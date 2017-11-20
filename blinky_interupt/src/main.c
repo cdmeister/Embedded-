@@ -90,12 +90,11 @@ int main(void)
         system_stm32f4xx.c file
      */
   //Disable STDOUT buffering. Otherwise nothing will be printed before
-//a newline character or when the buffer is flushed. This MUST be done
-//before any writes to STDOUT to have any effect...
-setbuf(stdout, NULL);
+  //a newline character or when the buffer is flushed. This MUST be done
+  //before any writes to STDOUT to have any effect...
+  setbuf(stdout, NULL);
 
   /* Enable Clock */
-  RCC->AHB1ENR |= RCC_AHB1ENR_GPIODEN;
   RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN; /* for external  button 1*/
 
   // Set mode of all pins as digital output
