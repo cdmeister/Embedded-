@@ -63,7 +63,7 @@ void USART_Init(USART_TypeDef * USARTx){
 
 }
 
-void USART_Write(USART_TypeDef * USARTx, uint8_t * str)  {
+void USART_Write(USART_TypeDef * USARTx, char * str)  {
 
   // First check if the Transmission Data register is empty
   while(*str != 0){
@@ -80,14 +80,24 @@ void USART_Write(USART_TypeDef * USARTx, uint8_t * str)  {
 
 }
 
-void USART_Read(USART_TypeDef * USARTx, uint8_t * buffer, uint32_t nBytes){
+void USART_Read(USART_TypeDef * USARTx, char * buffer, uint32_t nBytes){
 
   int i;
   for(i =0; i<nBytes;i++){
     while(! (USARTx->SR & USART_SR_RXNE));
-    buffer[i] = USARTx->DR & 0xFF;
+
+    char c = USARTx->DR & 0xFF;
+
+    if ( c != '\n') *buffer++=c;
+    else{
+      *buffer='\0';
+      USART_Write(USART2,"I am here\n\r");
+      break;
+    }
+
   }
 
+  return;
 }
 
 
@@ -148,16 +158,16 @@ int main(void)
 
   int i =1;
   while(i>0){
-    USART_Write(USART2,(uint8_t *) "Hello World\n\r");
+    USART_Write(USART2, "Hello World\n\r");
     i--;
   }
 
-  uint8_t buffer[11];
+  char  buffer[10];
 
-  USART_Read(USART2,buffer,11);
-  USART_Write(USART2,(uint8_t *) "Terminal Wrote: ");
+  USART_Read(USART2,buffer,10);
+  USART_Write(USART2,"Terminal Wrote: ");
   USART_Write(USART2,buffer);
-  USART_Write(USART2,(uint8_t*)"\n\r");
+  USART_Write(USART2,"\n\r");
 
 
   while(1);
