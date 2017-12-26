@@ -95,6 +95,7 @@ int main(void)
   setbuf(stdout, NULL);
 
   /* Enable Clock */
+  RCC->AHB1ENR |= RCC_AHB1ENR_GPIODEN;
   RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN; /* for external  button 1*/
 
   // Set mode of all pins as digital output
