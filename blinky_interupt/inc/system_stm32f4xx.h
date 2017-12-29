@@ -103,7 +103,6 @@ extern const uint8_t  APBPrescTable[8];     /*!< APB prescalers table values */
   */
 
 extern void SystemInit(void);
-extern void SetSysClock();
 extern void SystemCoreClockUpdate(void);
 /**
   * @}

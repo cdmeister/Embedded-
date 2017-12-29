@@ -94,8 +94,7 @@ AS_INCLUDES =
 # C includes
 C_INCLUDES =  \
 -Iinc \
--IDrivers/CMSIS/Device/ST/STM32F4xx/Include \
--IDrivers/CMSIS/Include
+-Iinc/CMSIS
 
 # compile gcc flags
 ASFLAGS = $(MCU) $(AS_DEFS) $(AS_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections
@@ -103,7 +102,7 @@ ASFLAGS = $(MCU) $(AS_DEFS) $(AS_INCLUDES) $(OPT) -Wall -fdata-sections -ffuncti
 CFLAGS = $(MCU) $(C_DEFS) $(C_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections
 
 ifeq ($(DEBUG), 1)
-CFLAGS += -g3 -gdwarf-2
+CFLAGS += -H -g3 -gdwarf-2
 endif
 
 
