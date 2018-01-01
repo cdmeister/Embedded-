@@ -7,4 +7,5 @@ Various Projects for STM32F4
   - telnet session: arm semihosting enable
 - led_switch: use switch on board to turn led on/off
 - ext_led_switch: external push button connect on the GPIO to turn led on/off
+- ext_interupt: using interrupts to light led on off using push button
 - usart: use "polling" usart technique to print to serial console
