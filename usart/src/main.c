@@ -16,8 +16,11 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
+#define BufferSize 32
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
+uint8_t * USART2_Buffer_Rx;
+volatile uint32_t Rx2_Counter = 0;
 /* Private function prototypes -----------------------------------------------*/
 
 /* Private functions ---------------------------------------------------------*/
@@ -63,7 +66,26 @@ void USART_Init(USART_TypeDef * USARTx){
 
 }
 
-void USART_Write(USART_TypeDef * USARTx, char * str)  {
+void USART_init_interrupt(USART_TypeDef * USARTx, IRQn_Type IRQn,
+                          uint32_t priority ){
+
+  // Receive register not empty interrupt
+  USARTx->CR1 |= USART_CR1_RXNEIE;
+
+  // Transmit register empty interrupt
+  USARTx->CR1 &= ~ USART_CR1_TXEIE;
+
+  // Set the priority of the interupt
+  NVIC_SetPriority(IRQn, priority);
+
+  // Enable NVIC interrupt
+  NVIC_EnableIRQ(IRQn);
+
+  //Allocate initial size for buffer for recieving/transmitting
+  USART2_Buffer_Rx = (uint8_t*) malloc(BufferSize * sizeof(uint8_t));
+}
+
+void USART_Write(USART_TypeDef * USARTx, uint8_t * str)  {
 
   // First check if the Transmission Data register is empty
   while(*str != 0){
@@ -91,13 +113,46 @@ void USART_Read(USART_TypeDef * USARTx, char * buffer, uint32_t nBytes){
     if ( c != '\n') *buffer++=c;
     else{
       *buffer='\0';
-      USART_Write(USART2,"I am here\n\r");
+      USART_Write(USART2,(uint8_t *)"I am here\n\r");
       break;
     }
 
   }
 
   return;
+}
+
+void receive(USART_TypeDef * USARTx, uint8_t * buffer,volatile uint32_t * pCounter){
+
+  if(USART2->SR & USART_SR_RXNE){
+  uint8_t stop = 0;
+  do{
+    char c = USARTx->DR & 0xFF;
+    buffer[*pCounter] = (uint8_t) c;
+    (*pCounter)++;
+    if((*pCounter) >= BufferSize){
+      int current_size =  sizeof(buffer)/sizeof(buffer[0]);
+      (*pCounter)=0;
+      buffer = realloc(buffer, current_size*2);
+    }
+    if( c == '\n' ) stop = 1;
+  }while(!stop);
+
+  USART_Write(USARTx, (uint8_t *)"Terminal Wrote!!!!!!!!!!!!!!!!!!!!: \n\r");
+  USART_Write(USARTx, (uint8_t *)"Heloo World\n\r");
+  //USART_Write(USARTx,buffer);
+  //USART_Write(USARTx,(uint8_t *)"\n\r");
+  }
+
+
+}
+
+void USART2_IRQHandler(void){
+
+    receive(USART2, USART2_Buffer_Rx,&Rx2_Counter);
+
+
+
 }
 
 
@@ -154,20 +209,20 @@ int main(void)
 
   // Initial USART2
   USART_Init(USART2);
-
+  USART_init_interrupt(USART2,USART2_IRQn,0);
 
   int i =1;
   while(i>0){
-    USART_Write(USART2, "Hello World\n\r");
+    USART_Write(USART2, (uint8_t *)"Hello Startup\n\r");
     i--;
   }
 
-  char  buffer[10];
+  //char  buffer[10];
 
-  USART_Read(USART2,buffer,10);
-  USART_Write(USART2,"Terminal Wrote: ");
-  USART_Write(USART2,buffer);
-  USART_Write(USART2,"\n\r");
+  //USART_Read(USART2,buffer,10);
+  //USART_Write(USART2,"Terminal Wrote: ");
+  //USART_Write(USART2,buffer);
+  //USART_Write(USART2,"\n\r");
 
 
   while(1);
