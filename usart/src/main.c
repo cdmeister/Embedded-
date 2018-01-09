@@ -16,7 +16,7 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
-#define BufferSize 32
+#define BufferSize 1
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 volatile char * USART2_Buffer_Rx;
@@ -131,6 +131,7 @@ void receive(USART_TypeDef * USARTx, volatile char * buffer,volatile uint32_t * 
       (*pCounter)++;
     }
     else{
+      buffer[*pCounter] ='\0';
       *pCounter = 0;
       USART_Write(USARTx,buffer);
       USART_Write(USARTx,"\n\r");
