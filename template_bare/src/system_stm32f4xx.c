@@ -356,6 +356,10 @@ static void SetSysClock(void){
   /* Able to successfully startup the HSE Clock */
   if(HSEStatus == (uint32_t) 0x1){
 
+    /*Set the PWR_CFG VOS*/
+    PWR->CR &= ~(PWR_CR_VOS_Msk);
+    PWR->CR |= PWR_CR_VOS;
+
     /*Configre the multiplier and division factors to the RCC_PLLCFGR Register*/
     RCC->PLLCFGR &= ~(RCC_PLLCFGR_PLLM_Msk);
     RCC->PLLCFGR |= (PLL_M << RCC_PLLCFGR_PLLM_Pos); /*PLL_M*/
