@@ -9,3 +9,4 @@ Various Projects for STM32F4
 - ext_led_switch: external push button connect on the GPIO to turn led on/off
 - ext_interupt: using interrupts to light led on off using push button
 - usart: use "polling" usart technique to print to serial console
+- basic_timer: use general purpose timer to toggle led on pin PD15 via alternate function
