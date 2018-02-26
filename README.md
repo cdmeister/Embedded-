@@ -10,3 +10,4 @@ Various Projects for STM32F4
 - ext_interupt: using interrupts to light led on off using push button
 - usart: use "polling" usart technique to print to serial console
 - basic_timer: use general purpose timer to toggle led on pin PD15 via alternate function
+- timer_interrupt_arr: use general purpose timer and ARR to generate interrupt

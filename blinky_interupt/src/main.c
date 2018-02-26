@@ -127,7 +127,7 @@ int main(void)
   GPIOA->PUPDR &= ~0x3UL; /*Configure as no pullup or no pulldown*/
 
   // Generate interupt every 1ms
-  // Since clock is 1068 MHz, then 168MHz/1000 is
+  // Since clock is 168 MHz, then 168MHz/1000 is
   // 168000 clock ticks inorder to generate an interupt every 1ms
   SysTick_Init(SystemCoreClock/1000);
 

@@ -157,6 +157,11 @@ int main(void)
   TIM4->CR1 |= TIM_CR1_CEN;
 
   // Generate and interrupt every 1ms
+  // http://www.electronics-homemade.com/STM32F4-LED-Toggle-Systick.html
+  // If the clock is at 168MHz, then that is 168 000 000 ticks per second
+  // but the LOAD register is only 24-bit so you can't fit 168 000 000. Instead
+  // you can generate an interupt every 1ms so that would be 168 000 ticks per
+  // ms and you can fit 168 000 ticks into the LOAD register
   SysTick_Init(SystemCoreClock/1000);
 
   //unsigned int delay = 0;
