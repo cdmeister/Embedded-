@@ -16,12 +16,17 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
+#define PORTD_12 0x00001000
+#define PORTD_13 0x00002000
 #define PORTD_14 0x00004000
 #define PORTD_15 0x00008000
 
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 volatile uint32_t TimeDelay;
+volatile uint16_t CCR3_Interval = 0; // Red LED
+volatile uint16_t CCR4_Interval = 0; // Blue LED
+
 
 /* Private function prototypes -----------------------------------------------*/
 /* Private functions ---------------------------------------------------------*/
@@ -29,12 +34,19 @@ volatile uint32_t TimeDelay;
 void TIM4_IRQHandler(void){
 
   // Check whether an overflow event has taken place
-  if((TIM4->SR & TIM_SR_UIF) != 0){
+  if((TIM4->SR & TIM_SR_CC3IF) != 0){
 
 
+    GPIOD->ODR ^=(PORTD_14);
+    uint16_t CCR3_Current = TIM4->CCR3;
+    TIM4->CCR3 = CCR3_Current + CCR3_Interval;
+    TIM4->SR &= ~TIM_SR_CC3IF;
+  }
+  if((TIM4->SR & TIM_SR_CC4IF) != 0){
     GPIOD->ODR ^=(PORTD_15);
-
-    TIM4->SR &= ~TIM_SR_UIF;
+    uint16_t CCR4_Current = TIM4->CCR4;
+    TIM4->CCR4 = CCR4_Current + CCR4_Interval;
+    TIM4->SR &= ~TIM_SR_CC4IF;
   }
 
 
@@ -85,6 +97,110 @@ void SysTick_Init (uint32_t ticks){
 
 }
 
+void timer_init(void){
+
+  // Enable Timer 4 clock
+  RCC->APB1ENR |= RCC_APB1ENR_TIM4EN;
+
+  // Disable Timer 4
+  TIM4->CR1 &= ~TIM_CR1_CEN;
+
+  // Counting Direction: 0 = up-counting, 1 = down-counting
+  TIM4->CR1 &=~(TIM_CR1_DIR);
+
+  //Clock Prescaler
+  uint32_t TIM4COUNTER_Frequency = 2688; //Desired Frequency
+  TIM4->PSC = (SystemCoreClock/TIM4COUNTER_Frequency)-1;
+
+  //Auto Reload: up-counting (0-> ARR), down-counting (ARR -> 0)
+  TIM4->ARR = 65535;
+
+  // ------------------Channel 3 Setup ----------------------------------
+
+  // Disable Input/Output for Channel 3
+  // This must be disable in order to set the channel as
+  // Input or Output
+  TIM4->CCER &= ~TIM_CCER_CC3E;
+
+  // Set Channel 4 as output channel
+  TIM4->CCMR2 &= ~(TIM_CCMR2_CC3S);
+
+  // Set the first value to compare against
+  CCR3_Interval = TIM4COUNTER_Frequency/8; //336
+  TIM4->CCR3=CCR3_Interval;
+
+  // Clear Output compare mode bits for channel 3
+  TIM4->CCMR2 &= ~TIM_CCMR2_OC3M;
+
+  // Select Active Mode(0001)
+  TIM4->CCMR2 |= (TIM_CCMR2_OC3M_1);
+
+  // Select Preload Enable to be disable, allow to update CCR4 register
+  // to be updated at anytime
+  TIM4->CCMR2 &=~(TIM_CCMR2_OC3PE);
+
+  // Select Ouput polarity: 0 = active high, 1 = active low
+  TIM4->CCER &= ~(TIM_CCER_CC3P);
+
+  // Compare/Caputre output Complementary Polarity
+  // Must be kept at reset for channel if configured as output
+  TIM4->CCER &=~(TIM_CCER_CC3NP);
+
+  // Enable Output for channel 4
+  TIM4->CCER |= TIM_CCER_CC3E;
+
+  // ------------------Channel 4 Setup ----------------------------------
+
+  // Disable Input/Output for Channel 4
+  // This must be disable in order to set the channel as
+  // Input or Output
+  TIM4->CCER &= ~TIM_CCER_CC4E;
+
+  // Set Channel 4 as output channel
+  TIM4->CCMR2 &= ~(TIM_CCMR2_CC4S);
+
+  // Set the first value to compare against
+  CCR4_Interval = TIM4COUNTER_Frequency/1; //672
+  TIM4->CCR4=CCR4_Interval;
+
+  // Clear Output compare mode bits for channel 1
+  TIM4->CCMR2 &= ~TIM_CCMR2_OC4M;
+
+  // Select Active Mode(0001)
+  TIM4->CCMR2 |= (TIM_CCMR2_OC4M_1);
+
+  // Select Preload Enable to be disable, allow to update CCR4 register
+  // to be updated at anytime
+  TIM4->CCMR2 &=~(TIM_CCMR2_OC4PE);
+
+  // Select Ouput polarity: 0 = active high, 1 = active low
+  TIM4->CCER &= ~(TIM_CCER_CC4P);
+
+  // Compare/Caputre output Complementary Polarity
+  // Must be kept at reset for channel if configured as output
+  TIM4->CCER &=~(TIM_CCER_CC4NP);
+
+  // Enable Output for channel 4
+  TIM4->CCER |= TIM_CCER_CC4E;
+
+  // --------------------------------------------------------------
+  //Enable interrupts only on channel 3 and 4
+  TIM4->SR &= ~(TIM_SR_CC3IF | TIM_SR_CC4IF);
+
+  //Enable interrupts only on channel 3 and 4
+  TIM4->DIER |= (TIM_DIER_CC3IE | TIM_DIER_CC4IE);
+
+  // Set TIM4 priority to 1
+  NVIC_SetPriority(TIM4_IRQn,1);
+
+  // Enable TIM4 interrupt
+  NVIC_EnableIRQ(TIM4_IRQn);
+
+  // Enable Timer 4 after all of the initialization
+  TIM4->CR1 |= TIM_CR1_CEN;
+
+}
+
 /**
   * @brief   Main program
   * @param  None
@@ -106,8 +222,10 @@ int main(void)
   // Set mode of all pins as digital output
   // 00 = digital input         01 = digital output
   // 10 = alternate function    11 = analog (default)
-  GPIOD->MODER &=~(GPIO_MODER_MODE15|GPIO_MODER_MODE14);
-  GPIOD->MODER |=(GPIO_MODER_MODE15_0|GPIO_MODER_MODE14_0); //output
+  GPIOD->MODER &=~(GPIO_MODER_MODE15|GPIO_MODER_MODE14
+                  |GPIO_MODER_MODE12|GPIO_MODER_MODE13);
+  GPIOD->MODER |=(GPIO_MODER_MODE15_0|GPIO_MODER_MODE14_0|
+                  GPIO_MODER_MODE12_0|GPIO_MODER_MODE13_0); //output
   //GPIOD->MODER |=(GPIO_MODER_MODE15_1); //alternate function
 
   //GPIOD->AFR[1] &= ~(GPIO_AFRH_AFSEL15);
@@ -116,45 +234,22 @@ int main(void)
   // Set output tupe of all pins as push-pull
   // 0 = push-pull (default)
   // 1 = open-drain
-  GPIOD->OTYPER &= ~(GPIO_OTYPER_OT15|GPIO_OTYPER_OT14);
+  GPIOD->OTYPER &= ~(GPIO_OTYPER_OT15|GPIO_OTYPER_OT14
+                    |GPIO_OTYPER_OT13|GPIO_OTYPER_OT12);
 
   // Set output speed of all pins as high
   // 00 = Low speed           01 = Medium speed
   // 10 = Fast speed          11 = High speed
-  GPIOD->OSPEEDR &=~(GPIO_OSPEEDR_OSPEED15|GPIO_OSPEEDR_OSPEED14); /* Configure as high speed */
-  GPIOD->OSPEEDR |= (GPIO_OSPEEDR_OSPEED15|GPIO_OSPEEDR_OSPEED14);
+  GPIOD->OSPEEDR &=~(GPIO_OSPEEDR_OSPEED15|GPIO_OSPEEDR_OSPEED14
+                    |GPIO_OSPEEDR_OSPEED13|GPIO_OSPEEDR_OSPEED12); /* Configure as high speed */
+  GPIOD->OSPEEDR |= (GPIO_OSPEEDR_OSPEED15|GPIO_OSPEEDR_OSPEED14
+                    |GPIO_OSPEEDR_OSPEED13|GPIO_OSPEEDR_OSPEED12); /* Configure as high speed */
 
   // Set all pins as no pull-up, no pull-down
   // 00 = no pull-up, no pull-down    01 = pull-up
   // 10 = pull-down,                  11 = reserved
-  GPIOD->PUPDR &= ~(GPIO_PUPDR_PUPD15|GPIO_PUPDR_PUPD14); /*no pul-up, no pull-down*/
-
-  // Enable Timer 4 clock
-  RCC->APB1ENR |= RCC_APB1ENR_TIM4EN;
-
-  // Disable Timer 4
-  TIM4->CR1 &= ~TIM_CR1_CEN;
-
-  // Counting Direction: 0 = up-counting, 1 = down-counting
-  TIM4->CR1 &=~(TIM_CR1_DIR);
-
-  //Clock Prescaler
-  TIM4->PSC = 62499;
-
-  //Auto Reload: up-counting (0-> ARR), down-counting (ARR -> 0)
-  TIM4->ARR = 1344;
-
-  //Enable interrupts
-  TIM4->DIER |= TIM_DIER_UIE;
-
-  // Set TIM4 priority to 1
-  NVIC_SetPriority(TIM4_IRQn,1);
-
-  // Enable TIM4 interrupt
-  NVIC_EnableIRQ(TIM4_IRQn);
-
-  // Enable Timer 4
-  TIM4->CR1 |= TIM_CR1_CEN;
+  GPIOD->PUPDR &= ~(GPIO_PUPDR_PUPD15|GPIO_PUPDR_PUPD14 /*no pul-up, no pull-down*/
+                    |GPIO_PUPDR_PUPD13|GPIO_PUPDR_PUPD12);
 
   // Generate and interrupt every 1ms
   // http://www.electronics-homemade.com/STM32F4-LED-Toggle-Systick.html
@@ -162,7 +257,9 @@ int main(void)
   // but the LOAD register is only 24-bit so you can't fit 168 000 000. Instead
   // you can generate an interupt every 1ms so that would be 168 000 ticks per
   // ms and you can fit 168 000 ticks into the LOAD register
-  SysTick_Init(SystemCoreClock/1000);
+  //SysTick_Init(SystemCoreClock/1000);
+
+  timer_init();
 
   //unsigned int delay = 0;
   //GPIOD->ODR |= PORTD_15;
@@ -170,8 +267,11 @@ int main(void)
   //GPIOD->ODR &=~PORTD_15;
 
   while(1){
-    GPIOD->ODR ^=PORTD_14;
-    Delay(500);
+    //GPIOD->ODR ^=PORTD_12;
+    //GPIOD->ODR ^=PORTD_13;
+   // GPIOD->ODR ^=PORTD_14;
+   // GPIOD->ODR ^=PORTD_15;
+    //Delay(500);
 
   }
   return 0;
