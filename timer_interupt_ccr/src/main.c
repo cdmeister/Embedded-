@@ -16,10 +16,10 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
-#define PORTD_12 0x00001000
-#define PORTD_13 0x00002000
-#define PORTD_14 0x00004000
-#define PORTD_15 0x00008000
+#define PORTD_12 0x00001000 //Green
+#define PORTD_13 0x00002000 //Orange
+#define PORTD_14 0x00004000 //Red
+#define PORTD_15 0x00008000 //Blue
 
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
@@ -37,7 +37,7 @@ void TIM4_IRQHandler(void){
   if((TIM4->SR & TIM_SR_CC3IF) != 0){
 
 
-    GPIOD->ODR ^=(PORTD_14);
+    GPIOD->ODR ^=(PORTD_13);
     uint16_t CCR3_Current = TIM4->CCR3;
     TIM4->CCR3 = CCR3_Current + CCR3_Interval;
     TIM4->SR &= ~TIM_SR_CC3IF;
@@ -184,7 +184,7 @@ void timer_init(void){
   TIM4->CCER |= TIM_CCER_CC4E;
 
   // --------------------------------------------------------------
-  //Enable interrupts only on channel 3 and 4
+  //Clear interrupt status only on channel 3 and 4
   TIM4->SR &= ~(TIM_SR_CC3IF | TIM_SR_CC4IF);
 
   //Enable interrupts only on channel 3 and 4
@@ -257,21 +257,16 @@ int main(void)
   // but the LOAD register is only 24-bit so you can't fit 168 000 000. Instead
   // you can generate an interupt every 1ms so that would be 168 000 ticks per
   // ms and you can fit 168 000 ticks into the LOAD register
-  //SysTick_Init(SystemCoreClock/1000);
+  SysTick_Init(SystemCoreClock/1000);
 
   timer_init();
 
-  //unsigned int delay = 0;
-  //GPIOD->ODR |= PORTD_15;
-  //for(delay= 0; delay < 1066667; delay++);
-  //GPIOD->ODR &=~PORTD_15;
-
   while(1){
-    //GPIOD->ODR ^=PORTD_12;
+    GPIOD->ODR ^=PORTD_12;
     //GPIOD->ODR ^=PORTD_13;
    // GPIOD->ODR ^=PORTD_14;
    // GPIOD->ODR ^=PORTD_15;
-    //Delay(500);
+    Delay(500);
 
   }
   return 0;
