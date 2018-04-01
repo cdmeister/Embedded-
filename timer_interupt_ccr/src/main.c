@@ -110,7 +110,7 @@ void timer_init(void){
 
   //Clock Prescaler
   uint32_t TIM4COUNTER_Frequency = 2688; //Desired Frequency
-  TIM4->PSC = (SystemCoreClock/TIM4COUNTER_Frequency)-1;
+  TIM4->PSC = (84000000/TIM4COUNTER_Frequency)-1;
 
   //Auto Reload: up-counting (0-> ARR), down-counting (ARR -> 0)
   TIM4->ARR = 65535;
