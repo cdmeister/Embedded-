@@ -331,11 +331,17 @@ int main(void)
    // GPIOD->ODR ^=PORTD_15;
     //Delay(500);
     int i=0;
-    for(;i<max_brightness;i+=2){
+    for(;i<max_brightness;i+=1){
       TIM4->CCR4=i;
       TIM4->CCR3=i;
-      Delay(10);
+      Delay(1);
     }
+    for(;i>0;i-=1){
+      TIM4->CCR4=i;
+      TIM4->CCR3=i;
+      Delay(1);
+    }
+
 
   }
   return 0;
