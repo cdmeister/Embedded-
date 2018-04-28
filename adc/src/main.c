@@ -38,6 +38,8 @@ void LCD_Pulse(void);
 void LCD_SendData( uint8_t c);
 void LCD_SendCmd(uint8_t c);
 void LCD_Init(void);
+void LCD_Clear(void);
+void LCD_ReturnHome(void);
 /* Private functions ---------------------------------------------------------*/
 
 
@@ -123,9 +125,21 @@ return;
 }
 
 
-double adc_value_to_temp(const uint16_t value) {
+void LCD_Clear(void){
+
+  LCD_SendCmd(0x01);
+  Delay(2000);
+  return;
+}
+
+void LCD_ReturnHome(void){
+  LCD_SendCmd(0x02);
+  Delay(2000);
+}
+
+uint8_t adc_value_to_temp(const uint16_t value) {
  /* convert reading to millivolts */
-  double conv_value=value;
+  uint16_t conv_value=value;
   conv_value *= 3300;
   conv_value /= 0xfff; //Reading in mV
   conv_value /= 1000.0; //Reading in Volts
@@ -361,12 +375,21 @@ int main(void)
   char * str;
   str = "Lebron is GOAT";
   while(*str !=0) LCD_SendData(*str++);
+    Delay(1000);
+    LCD_Clear();
+
 
   while(1){
-    //uint16_t adc_value_temp = adc_read_temp(ADC1);
-    //int temp = adc_value_to_temp(adc_value_temp);
-
-
+    uint16_t adc_value_temp = adc_read_temp(ADC1);
+    uint8_t temp = adc_value_to_temp(adc_value_temp);
+    char *str1 = "TEMP: ";
+    while(*str1 !=0) LCD_SendData(*str1++);
+    char buffer[7];
+    itoa(adc_value_temp,buffer,10);
+    int i =0;
+    while(buffer[i] !=0){ LCD_SendData(buffer[i]); ++i;}
+    Delay(900);
+    LCD_Clear();
 
     //uint16_t temp = adc_value_temp;
   }
