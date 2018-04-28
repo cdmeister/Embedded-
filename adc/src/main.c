@@ -16,47 +16,128 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
-#define PORTD_12 0x00001000 //Green
-#define PORTD_13 0x00002000 //Orange
-#define PORTD_14 0x00004000 //Red
-#define PORTD_15 0x00008000 //Blue
+#define ADC_TEMPERATURE_V25       760  /* mV */
+#define ADC_TEMPERATURE_AVG_SLOPE 2500 /* mV/C */
+
+#define LCD_Port GPIOD
+#define LCD_RS 2 //RS (Register Select): 0 = command, 1 = data
+#define LCD_EN 3 // Enable Pin
+
+#define LCD_D4 4 // GPIO pin for DB 4
+#define LCD_D5 5 // GPIO pin for DB 5
+#define LCD_D6 6 // GPIO pin for DB 6
+#define LCD_D7 7 // GPIO pin for DB 7
 
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 volatile uint32_t TimeDelay;
-volatile uint32_t counter_toggle;
-const uint32_t one_sec =100;
-
 /* Private function prototypes -----------------------------------------------*/
 void Delay(uint32_t nTime);
+void LCD_WriteNibble(uint8_t c);
+void LCD_Pulse(void);
+void LCD_SendData( uint8_t c);
+void LCD_SendCmd(uint8_t c);
+void LCD_Init(void);
 /* Private functions ---------------------------------------------------------*/
 
-void TIM4_IRQHandler(void){
 
-  // Check whether an overflow event has taken place
-  if((TIM4->SR & TIM_SR_CC2IF) != 0){
-    if(counter_toggle == one_sec){
-      GPIOD->ODR ^=(PORTD_12);
-      counter_toggle =0;
-    }
-    else{
-      counter_toggle++;
-    }
-    TIM4->SR &= ~TIM_SR_CC2IF;
-  }
-  /*if((TIM4->SR & TIM_SR_CC4IF) != 0){
-    GPIOD->ODR ^=(PORTD_13);
-    TIM4->SR &= ~TIM_SR_CC4IF;
-  }*/
-  // Check whether an overflow event has taken place
-  /*if((TIM4->SR & TIM_SR_UIF) != 0){
 
-    TIM4->SR &= ~TIM_SR_UIF;
+void LCD_WriteNibble(uint8_t c){
 
-  }*/
+  if ( c & 0x8 ) LCD_Port->ODR |= 1 << LCD_D7;
+  else LCD_Port->ODR &= ~(1 << LCD_D7);
+
+  if ( c & 0x4 ) LCD_Port->ODR |= 1 << LCD_D6;
+  else LCD_Port->ODR &= ~(1 << LCD_D6);
+
+  if ( c & 0x2 ) LCD_Port->ODR |= 1 << LCD_D5;
+  else LCD_Port->ODR &= ~(1 << LCD_D5);
+
+  if ( c & 0x1 ) LCD_Port->ODR |= 1 << LCD_D4;
+  else LCD_Port->ODR &= ~(1 << LCD_D4);
+
+  return;
+}
+
+void LCD_Pulse(void){
+
+  LCD_Port->ODR |= 1 << LCD_EN;
+  Delay(4);
+  LCD_Port->ODR &= ~(1 << LCD_EN);
+  Delay(4);
+
 
 }
 
+void LCD_SendData(uint8_t c){
+
+
+  LCD_WriteNibble(c>>4);
+  LCD_Pulse();
+
+  LCD_WriteNibble(c & 0xF);
+  LCD_Pulse();
+}
+void LCD_SendCmd(uint8_t c){
+
+  LCD_Port->ODR &= ~(1<<LCD_RS);
+
+  LCD_WriteNibble(c>>4);
+  LCD_Pulse();
+
+  LCD_WriteNibble( c & 0xF);
+  LCD_Pulse();
+
+  LCD_Port->ODR |= 1 << LCD_RS;
+}
+
+void LCD_Init(void){
+
+  Delay(40);
+  LCD_SendCmd(0x30);
+
+  Delay(5);
+  LCD_SendCmd(0x30);
+
+  Delay(5);
+  LCD_SendCmd(0x30);
+  Delay(5);
+
+  LCD_SendCmd(0x2);
+  Delay(5);
+
+  LCD_SendCmd(0x28);
+  Delay(5);
+
+  //LCD_SendCmd(0x08);
+  //Delay(5);
+
+  LCD_SendCmd(0x01);
+  Delay(5);
+
+  LCD_SendCmd(0x06);
+  Delay(5);
+  LCD_SendCmd(0x0F);
+  Delay(5);
+return;
+}
+
+
+double adc_value_to_temp(const uint16_t value) {
+ /* convert reading to millivolts */
+  double conv_value=value;
+  conv_value *= 3300;
+  conv_value /= 0xfff; //Reading in mV
+  conv_value /= 1000.0; //Reading in Volts
+  conv_value -= 0.760; // Subtract the reference voltage at 25°C
+  conv_value /= .0025; // Divide by slope 2.5mV
+  conv_value += 25.0; // Add the 25°C
+return conv_value;
+}
+
+uint16_t adc_steps_per_volt(const uint16_t vref_value) {
+ return (vref_value * 10) / 12; /* assume 1.2V internal voltage */
+}
 // SysTick System Handler
 void SysTick_Handler (void){ // SysTick interrupt service routine
   // TimeDelay is a global variable delcared as volatile
@@ -102,165 +183,112 @@ void SysTick_Init (uint32_t ticks){
 
 }
 
-void timer_init(void){
+void ADCx_Init(ADC_TypeDef * ADCx){
 
-  // Enable Timer 4 clock
-  RCC->APB1ENR |= RCC_APB1ENR_TIM4EN;
-
-  // Disable Timer 4
-  TIM4->CR1 &= ~TIM_CR1_CEN;
-
-  // Counting Direction: 0 = up-counting, 1 = down-counting
-  TIM4->CR1 &=~(TIM_CR1_DIR);
-
-  // Auto-reload preload enable
-  TIM4->CR1 &=~(TIM_CR1_ARPE);
-  TIM4->CR1 |=(TIM_CR1_ARPE);
-
-  //Clock Prescaler
-  uint32_t TIM4COUNTER_Frequency = 100000; //Desired Frequency
-  TIM4->PSC = (84000000/TIM4COUNTER_Frequency)-1;
-  //TIM4->PSC = 62499;
-
-  //Auto Reload: up-counting (0-> ARR), down-counting (ARR -> 0)
-  TIM4->ARR = .01 * 100000-1;
-  //TIM4->ARR = 1343;
-
-  // ------------------Channel 2 Setup ----------------------------------
-
-  // Disable Input/Output for Channel 3
-  // This must be disable in order to set the channel as
-  // Input or Output
-  TIM4->CCER &= ~TIM_CCER_CC2E;
-
-  // Set Channel 4 as output channel
-  TIM4->CCMR1 &= ~(TIM_CCMR1_CC2S);
-
-  // Set the first value to compare against
-  // 50% duty cycle
-  //TIM4->CCR3=.5*TIM4->ARR;
-  TIM4->CCR2 = TIM4->ARR;
-
-  // Clear Output compare mode bits for channel 3
-  TIM4->CCMR1 &= ~TIM_CCMR1_OC2M;
-
-  // Select Pulse Width Modulation Mode 1
-  TIM4->CCMR1 |= (TIM_CCMR1_OC2M_1);
-
-  // Select Preload Enable to be enable for PWM, allow to update CCR4 register
-  // to be updated at overflow/underflow events
-  TIM4->CCMR1 &=~(TIM_CCMR1_OC2PE);
-
-  // Select Ouput polarity: 0 = active high, 1 = active low
-  TIM4->CCER &= ~(TIM_CCER_CC2P);
-
-  // Compare/Caputre output Complementary Polarity
-  // Must be kept at reset for channel if configured as output
-  TIM4->CCER &=~(TIM_CCER_CC2NP);
-
-  // Enable Output for channel 4
-  TIM4->CCER |= TIM_CCER_CC2E;
+  // Enable ADCx
+  if(ADCx == ADC1) RCC->APB2ENR |= RCC_APB2ENR_ADC1EN;
+  else if(ADCx == ADC2) RCC->APB2ENR |= RCC_APB2ENR_ADC2EN;
+  else RCC->APB2ENR |= RCC_APB2ENR_ADC3EN;
 
 
-  // ------------------Channel 3 Setup ----------------------------------
-
-  // Disable Input/Output for Channel 3
-  // This must be disable in order to set the channel as
-  // Input or Output
-  TIM4->CCER &= ~TIM_CCER_CC3E;
-
-  // Set Channel 4 as output channel
-  TIM4->CCMR2 &= ~(TIM_CCMR2_CC3S);
-
-  // Set the first value to compare against
-  // 50% duty cycle
-  //TIM4->CCR3=.5*TIM4->ARR;
-  TIM4->CCR3 = 0;
-
-  // Clear Output compare mode bits for channel 3
-  TIM4->CCMR2 &= ~TIM_CCMR2_OC3M;
-
-  // Select Pulse Width Modulation Mode 1
-  TIM4->CCMR2 |= (TIM_CCMR2_OC3M_2|TIM_CCMR2_OC3M_1);
-
-  // Select Preload Enable to be enable for PWM, allow to update CCR4 register
-  // to be updated at overflow/underflow events
-  TIM4->CCMR2 &=~(TIM_CCMR2_OC3PE);
-  TIM4->CCMR2 |= (TIM_CCMR2_OC3PE);
-
-  // Select Ouput polarity: 0 = active high, 1 = active low
-  TIM4->CCER &= ~(TIM_CCER_CC3P);
-
-  // Compare/Caputre output Complementary Polarity
-  // Must be kept at reset for channel if configured as output
-  TIM4->CCER &=~(TIM_CCER_CC3NP);
-
-  // Enable Output for channel 4
-  TIM4->CCER |= TIM_CCER_CC3E;
-
-  // ------------------Channel 4 Setup ----------------------------------
-
-  // Disable Input/Output for Channel 4
-  // This must be disable in order to set the channel as
-  // Input or Output
-  TIM4->CCER &= ~TIM_CCER_CC4E;
-
-  // Set Channel 4 as output channel
-  TIM4->CCMR2 &= ~(TIM_CCMR2_CC4S);
-
-  // Set the first value to compare against
-  TIM4->CCR4=0;
-
-  // Clear Output compare mode bits for channel 1
-  TIM4->CCMR2 &= ~TIM_CCMR2_OC4M;
-
-  // Select Pulse Width Modulation Mode 1
-  TIM4->CCMR2 |= (TIM_CCMR2_OC4M_2|TIM_CCMR2_OC4M_1);
-
-  // Select Preload Enable to be enable for PWM, allow to update CCR4 register
-  // to be updated at overflow/underflow events
-  TIM4->CCMR2 &=~(TIM_CCMR2_OC4PE);
-  TIM4->CCMR2 |= (TIM_CCMR2_OC4PE);
-
-  // Select Ouput polarity: 0 = active high, 1 = active low
-  TIM4->CCER &= ~(TIM_CCER_CC4P);
-
-  // Compare/Caputre output Complementary Polarity
-  // Must be kept at reset for channel if configured as output
-  TIM4->CCER &=~(TIM_CCER_CC4NP);
-
-  // Enable Output for channel 4
-  TIM4->CCER |= TIM_CCER_CC4E;
-
-  // --------------------------------------------------------------
-
-  // Enable Update Generation
-  TIM4->EGR &= ~TIM_EGR_UG;
-  TIM4->EGR |= TIM_EGR_UG;
-
-  // Center Align Mode Selection
-  TIM4->CR1 &=~(TIM_CR1_CMS);
-
-  //Clear interrupt status only on channel 3 and 4
-
-  TIM4->SR &= ~(TIM_SR_CC2IF);
-
-  //Enable interrupts only on channel 3 and 4
-
-  TIM4->DIER |= (TIM_DIER_CC2IE);
+  /*
+   * ADC Mode Selection
+   *
+   * Note:
+   *  00000 : Independent Mode, ADC operate independently
+   */
+  ADC123_COMMON->CCR &= ~(ADC_CCR_MULTI);
 
 
-  // Set TIM4 priority to 1
-  NVIC_SetPriority(TIM4_IRQn,3);
+  /*
+   * Set and cleared by software to select the frequency of the clock
+   *  to the ADC. The clock is common for all the ADCs.
+   *
+   * Note:
+   *  00: PCLK2 divided by 2
+   *  01: PCLK2 divided by 4
+   *  10: PCLK2 divided by 6
+   *  11: PCLK2 divided by 8
+  */
+  ADC123_COMMON->CCR &= ~(ADC_CCR_ADCPRE);  // Clear
+  ADC123_COMMON->CCR |= (ADC_CCR_ADCPRE_0); // DIV4
 
-  // Enable TIM4 interrupt
-  NVIC_EnableIRQ(TIM4_IRQn);
+
+  // Disable DMA
+  ADC123_COMMON->CCR &= ~(ADC_CCR_DMA);
+
+  // Delay (only used in double or triple mode
+  ADC123_COMMON->CCR &= ~(ADC_CCR_DELAY);
+
+  // Resolution ot 12-bits
+  ADCx->CR1 &= ~(ADC_CR1_RES);
+
+  // Scan Mode
+  ADCx->CR1 |= ADC_CR1_SCAN;
+
+  // Disable Continuos Mode
+  ADCx->CR2 &= ~(ADC_CR2_CONT);
+
+  // External Trigger on rising edge
+  ADCx->CR2 &= ~(ADC_CR2_EXTEN);
+
+  // Timer 2 Trigger to drive ADC conversion
+  ADCx->CR2 &= ~ADC_CR2_EXTSEL;
+
+  // Data Alignment
+  ADCx->CR2 &= ~(ADC_CR2_ALIGN);
+
+  // Number of Conversions
+  ADCx->SQR1 &= ~(ADC_SQR1_L); // 1 conversion
 
 
-  // Enable Timer 4 after all of the initialization
-  TIM4->CR1 |= TIM_CR1_CEN;
+     // Enable Temperature/Vref
+  ADC123_COMMON->CCR |=ADC_CCR_TSVREFE;
+
+  // Turn on the ADC
+  ADCx->CR2 |= ADC_CR2_ADON;
+
 
 }
+
+uint16_t adc_read_temp(ADC_TypeDef* ADCx) {
+
+  /* Configure Channel For Temp Sensor */
+  ADCx->SQR3 &= ~(ADC_SQR3_SQ1);
+  ADCx->SQR3 |= ADC_SQR3_SQ1_4; // Channel 16 for temp sensor on stm32f4 disc
+  // Sample Time is 480 cycles
+  ADCx->SMPR1 |= ADC_SMPR1_SMP16;
+
+
+  /* Enable the selected ADC conversion for regular group */
+  ADCx->CR2 |= (uint32_t)ADC_CR2_SWSTART;
+
+  /* wait for end of conversion */
+  while((ADCx->SR & ADC_SR_EOC) == 0);
+
+ return (uint16_t) ADCx->DR ;
+}
+
+uint16_t adc_read_vref(ADC_TypeDef* ADCx) {
+  /* Configure Channel For Vref*/
+  ADCx->SQR3 &= ~(ADC_SQR3_SQ2);
+  // Channel 17 for vref on stm32f4 disc
+  ADCx->SQR3 |= (ADC_SQR3_SQ1_4|ADC_SQR3_SQ1_0);
+  // Sample Time is 480 cycles
+  ADCx->SMPR1 |= ADC_SMPR1_SMP17;
+
+
+
+  /* Enable the selected ADC conversion for regular group */
+  ADCx->CR2 |= (uint32_t)ADC_CR2_SWSTART;
+
+  /* wait for end of conversion */
+  while((ADCx->SR & ADC_SR_EOC) == 0);
+
+ return (uint16_t) ADCx->DR ;
+}
+
+
 
 /**
   * @brief   Main program
@@ -277,43 +305,49 @@ int main(void)
         system_stm32f4xx.c file
      */
 
-  /*Enable Clock*/
-  RCC->AHB1ENR |= RCC_AHB1ENR_GPIODEN;
+  // Enable GPIO clock and configure the Tx pin and the Rx pin as
+  // Alternating functions, High Speed, Push-pull, Pull-up
 
-  // Set mode of all pins as digital output
+  RCC->AHB1ENR |= (RCC_AHB1ENR_GPIOAEN|RCC_AHB1ENR_GPIODEN);
+
+ // Set mode of all pins as digital output
   // 00 = digital input         01 = digital output
   // 10 = alternate function    11 = analog (default)
-  GPIOD->MODER &=~(GPIO_MODER_MODE15|GPIO_MODER_MODE14
-                  |GPIO_MODER_MODE12|GPIO_MODER_MODE13);
-  GPIOD->MODER |=(GPIO_MODER_MODE13_0|GPIO_MODER_MODE12_0);
-  //                GPIO_MODER_MODE12_0|GPIO_MODER_MODE13_0); //output
-  GPIOD->MODER |=(GPIO_MODER_MODE15_1 | GPIO_MODER_MODE14_1);
-                 // GPIO_MODER_MODE13_1 | GPIO_MODER_MODE12_1); //alternate function
+  GPIOD->MODER &=~(GPIO_MODER_MODE7|GPIO_MODER_MODE6
+                  | GPIO_MODER_MODE5|GPIO_MODER_MODE4
+                  | GPIO_MODER_MODE3|GPIO_MODER_MODE2);
 
-  GPIOD->AFR[1] &= ~(GPIO_AFRH_AFSEL15|GPIO_AFRH_AFSEL14);
-  GPIOD->AFR[1] |= (GPIO_AFRH_AFSEL15_1|GPIO_AFRH_AFSEL14_1);
+  GPIOD->MODER |=(GPIO_MODER_MODE7_0|GPIO_MODER_MODE6_0
+                  | GPIO_MODER_MODE5_0|GPIO_MODER_MODE4_0 //output
+                  | GPIO_MODER_MODE3_0|GPIO_MODER_MODE2_0); //output
 
   // Set output tupe of all pins as push-pull
   // 0 = push-pull (default)
   // 1 = open-drain
-  GPIOD->OTYPER &= ~(GPIO_OTYPER_OT15|GPIO_OTYPER_OT14
-                    |GPIO_OTYPER_OT13|GPIO_OTYPER_OT12);
+  GPIOD->OTYPER &= ~( GPIO_OTYPER_OT7 | GPIO_OTYPER_OT6
+                    | GPIO_OTYPER_OT5 | GPIO_OTYPER_OT4
+                    | GPIO_OTYPER_OT3 | GPIO_OTYPER_OT2);
 
   // Set output speed of all pins as high
   // 00 = Low speed           01 = Medium speed
   // 10 = Fast speed          11 = High speed
-  GPIOD->OSPEEDR &=~(GPIO_OSPEEDR_OSPEED15|GPIO_OSPEEDR_OSPEED14
-                    |GPIO_OSPEEDR_OSPEED13|GPIO_OSPEEDR_OSPEED12); /* Configure as high speed */
-  GPIOD->OSPEEDR |= (GPIO_OSPEEDR_OSPEED15|GPIO_OSPEEDR_OSPEED14
-                    |GPIO_OSPEEDR_OSPEED13|GPIO_OSPEEDR_OSPEED12); /* Configure as high speed */
+  GPIOD->OSPEEDR &=~(GPIO_OSPEEDR_OSPEED7|GPIO_OSPEEDR_OSPEED6
+                    | GPIO_OSPEEDR_OSPEED5|GPIO_OSPEEDR_OSPEED4
+                    | GPIO_OSPEEDR_OSPEED3|GPIO_OSPEEDR_OSPEED2); /* Configure as high speed */
+
+  GPIOD->OSPEEDR |=(GPIO_OSPEEDR_OSPEED6|GPIO_OSPEEDR_OSPEED6
+                    | GPIO_OSPEEDR_OSPEED5|GPIO_OSPEEDR_OSPEED4
+                    | GPIO_OSPEEDR_OSPEED3|GPIO_OSPEEDR_OSPEED2); /* Configure as high speed */
+
 
   // Set all pins as no pull-up, no pull-down
   // 00 = no pull-up, no pull-down    01 = pull-up
   // 10 = pull-down,                  11 = reserved
-  GPIOD->PUPDR &= ~(GPIO_PUPDR_PUPD15|GPIO_PUPDR_PUPD14 /*no pul-up, no pull-down*/
-                    |GPIO_PUPDR_PUPD13|GPIO_PUPDR_PUPD12);
+  GPIOD->PUPDR &= ~(GPIO_PUPDR_PUPD7|GPIO_PUPDR_PUPD6 /*no pul-up, no pull-down*/
+                    |GPIO_PUPDR_PUPD5|GPIO_PUPDR_PUPD4
+                    |GPIO_PUPDR_PUPD3|GPIO_PUPDR_PUPD2);
 
-  // Generate and interrupt every 1ms
+    // Generate and interrupt every 1ms
   // http://www.electronics-homemade.com/STM32F4-LED-Toggle-Systick.html
   // If the clock is at 168MHz, then that is 168 000 000 ticks per second
   // but the LOAD register is only 24-bit so you can't fit 168 000 000. Instead
@@ -321,28 +355,20 @@ int main(void)
   // ms and you can fit 168 000 ticks into the LOAD register
   SysTick_Init(SystemCoreClock/1000);
 
-  timer_init();
+  ADCx_Init(ADC1);
 
-  const int max_brightness = TIM4->ARR;
+  LCD_Init();
+  char * str;
+  str = "Lebron is GOAT";
+  while(*str !=0) LCD_SendData(*str++);
+
   while(1){
-    //GPIOD->ODR ^=PORTD_12;
-    //GPIOD->ODR ^=PORTD_13;
-   // GPIOD->ODR ^=PORTD_14;
-   // GPIOD->ODR ^=PORTD_15;
-    //Delay(500);
-    int i=0;
-    for(;i<max_brightness;i+=1){
-      TIM4->CCR4=i;
-      TIM4->CCR3=i;
-      Delay(1);
-    }
-    for(;i>0;i-=1){
-      TIM4->CCR4=i;
-      TIM4->CCR3=i;
-      Delay(1);
-    }
+    //uint16_t adc_value_temp = adc_read_temp(ADC1);
+    //int temp = adc_value_to_temp(adc_value_temp);
 
 
+
+    //uint16_t temp = adc_value_temp;
   }
   return 0;
 }
