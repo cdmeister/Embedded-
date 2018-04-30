@@ -20,17 +20,20 @@
 #define ADC_TEMPERATURE_AVG_SLOPE 2500 /* mV/C */
 
 #define LCD_Port GPIOD
-#define LCD_RS 2 //RS (Register Select): 0 = command, 1 = data
-#define LCD_EN 3 // Enable Pin
+#define LCD_RS 0 //RS (Register Select): 0 = command, 1 = data
+#define LCD_EN 1 // Enable Pin
 
-#define LCD_D4 4 // GPIO pin for DB 4
-#define LCD_D5 5 // GPIO pin for DB 5
-#define LCD_D6 6 // GPIO pin for DB 6
-#define LCD_D7 7 // GPIO pin for DB 7
+#define LCD_D4 2 // GPIO pin for DB 4
+#define LCD_D5 3 // GPIO pin for DB 5
+#define LCD_D6 4 // GPIO pin for DB 6
+#define LCD_D7 6 // GPIO pin for DB 7
 
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 volatile uint32_t TimeDelay;
+volatile uint8_t _displayFunction;
+volatile uint8_t _displayMode;
+volatile uint8_t _displayControl;
 /* Private function prototypes -----------------------------------------------*/
 void Delay(uint32_t nTime);
 void LCD_WriteNibble(uint8_t c);
@@ -40,6 +43,8 @@ void LCD_SendCmd(uint8_t c);
 void LCD_Init(void);
 void LCD_Clear(void);
 void LCD_ReturnHome(void);
+void LCD_noBlink(void);
+void LCD_Blink(void);
 /* Private functions ---------------------------------------------------------*/
 
 
@@ -135,6 +140,10 @@ void LCD_Clear(void){
 void LCD_ReturnHome(void){
   LCD_SendCmd(0x02);
   Delay(2000);
+}
+
+void LCD_noBlink(void){
+  LCD_SendCmd(0x0E);
 }
 
 uint8_t adc_value_to_temp(const uint16_t value) {
@@ -322,44 +331,45 @@ int main(void)
   // Enable GPIO clock and configure the Tx pin and the Rx pin as
   // Alternating functions, High Speed, Push-pull, Pull-up
 
-  RCC->AHB1ENR |= (RCC_AHB1ENR_GPIOAEN|RCC_AHB1ENR_GPIODEN);
+  RCC->AHB1ENR |= (RCC_AHB1ENR_GPIODEN);
 
  // Set mode of all pins as digital output
   // 00 = digital input         01 = digital output
   // 10 = alternate function    11 = analog (default)
-  GPIOD->MODER &=~(GPIO_MODER_MODE7|GPIO_MODER_MODE6
-                  | GPIO_MODER_MODE5|GPIO_MODER_MODE4
-                  | GPIO_MODER_MODE3|GPIO_MODER_MODE2);
+  GPIOD->MODER &=~(GPIO_MODER_MODE6|GPIO_MODER_MODE4
+                  | GPIO_MODER_MODE3|GPIO_MODER_MODE2
+                  | GPIO_MODER_MODE1|GPIO_MODER_MODE0);
 
-  GPIOD->MODER |=(GPIO_MODER_MODE7_0|GPIO_MODER_MODE6_0
-                  | GPIO_MODER_MODE5_0|GPIO_MODER_MODE4_0 //output
-                  | GPIO_MODER_MODE3_0|GPIO_MODER_MODE2_0); //output
+  GPIOD->MODER |=(GPIO_MODER_MODE6_0|GPIO_MODER_MODE4_0
+                  | GPIO_MODER_MODE3_0|GPIO_MODER_MODE2_0 //output
+                  | GPIO_MODER_MODE1_0|GPIO_MODER_MODE0_0); //output
 
   // Set output tupe of all pins as push-pull
   // 0 = push-pull (default)
   // 1 = open-drain
-  GPIOD->OTYPER &= ~( GPIO_OTYPER_OT7 | GPIO_OTYPER_OT6
-                    | GPIO_OTYPER_OT5 | GPIO_OTYPER_OT4
-                    | GPIO_OTYPER_OT3 | GPIO_OTYPER_OT2);
+  GPIOD->OTYPER &= ~( GPIO_OTYPER_OT6 | GPIO_OTYPER_OT4
+                    | GPIO_OTYPER_OT3 | GPIO_OTYPER_OT2
+                    | GPIO_OTYPER_OT1 | GPIO_OTYPER_OT0);
 
   // Set output speed of all pins as high
   // 00 = Low speed           01 = Medium speed
   // 10 = Fast speed          11 = High speed
-  GPIOD->OSPEEDR &=~(GPIO_OSPEEDR_OSPEED7|GPIO_OSPEEDR_OSPEED6
-                    | GPIO_OSPEEDR_OSPEED5|GPIO_OSPEEDR_OSPEED4
-                    | GPIO_OSPEEDR_OSPEED3|GPIO_OSPEEDR_OSPEED2); /* Configure as high speed */
+  GPIOD->OSPEEDR &=~(GPIO_OSPEEDR_OSPEED6|GPIO_OSPEEDR_OSPEED4
+                    | GPIO_OSPEEDR_OSPEED3|GPIO_OSPEEDR_OSPEED2
+                    | GPIO_OSPEEDR_OSPEED1|GPIO_OSPEEDR_OSPEED0); /* Configure as high speed */
 
-  GPIOD->OSPEEDR |=(GPIO_OSPEEDR_OSPEED6|GPIO_OSPEEDR_OSPEED6
-                    | GPIO_OSPEEDR_OSPEED5|GPIO_OSPEEDR_OSPEED4
-                    | GPIO_OSPEEDR_OSPEED3|GPIO_OSPEEDR_OSPEED2); /* Configure as high speed */
+  GPIOD->OSPEEDR |=(GPIO_OSPEEDR_OSPEED6|GPIO_OSPEEDR_OSPEED4
+                    | GPIO_OSPEEDR_OSPEED3|GPIO_OSPEEDR_OSPEED2
+                    | GPIO_OSPEEDR_OSPEED1|GPIO_OSPEEDR_OSPEED0); /* Configure as high speed */
 
 
   // Set all pins as no pull-up, no pull-down
   // 00 = no pull-up, no pull-down    01 = pull-up
   // 10 = pull-down,                  11 = reserved
-  GPIOD->PUPDR &= ~(GPIO_PUPDR_PUPD7|GPIO_PUPDR_PUPD6 /*no pul-up, no pull-down*/
-                    |GPIO_PUPDR_PUPD5|GPIO_PUPDR_PUPD4
-                    |GPIO_PUPDR_PUPD3|GPIO_PUPDR_PUPD2);
+  GPIOD->PUPDR &= ~(GPIO_PUPDR_PUPD6|GPIO_PUPDR_PUPD4 /*no pul-up, no pull-down*/
+                    |GPIO_PUPDR_PUPD3|GPIO_PUPDR_PUPD2
+                    |GPIO_PUPDR_PUPD1|GPIO_PUPDR_PUPD0);
+
 
     // Generate and interrupt every 1ms
   // http://www.electronics-homemade.com/STM32F4-LED-Toggle-Systick.html
@@ -390,7 +400,7 @@ int main(void)
     while(buffer[i] !=0){ LCD_SendData(buffer[i]); ++i;}
     Delay(900);
     LCD_Clear();
-
+    //LCD_ReturnHome();
     //uint16_t temp = adc_value_temp;
   }
   return 0;
