@@ -11,7 +11,8 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-
+#include "systick.h"
+#include "lcd.h"
 
 
 /* Private typedef -----------------------------------------------------------*/
@@ -19,133 +20,10 @@
 #define ADC_TEMPERATURE_V25       760  /* mV */
 #define ADC_TEMPERATURE_AVG_SLOPE 2500 /* mV/C */
 
-#define LCD_Port GPIOD
-#define LCD_RS 0 //RS (Register Select): 0 = command, 1 = data
-#define LCD_EN 1 // Enable Pin
-
-#define LCD_D4 2 // GPIO pin for DB 4
-#define LCD_D5 3 // GPIO pin for DB 5
-#define LCD_D6 4 // GPIO pin for DB 6
-#define LCD_D7 6 // GPIO pin for DB 7
-
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
-volatile uint32_t TimeDelay;
-volatile uint8_t _displayFunction;
-volatile uint8_t _displayMode;
-volatile uint8_t _displayControl;
 /* Private function prototypes -----------------------------------------------*/
-void Delay(uint32_t nTime);
-void LCD_WriteNibble(uint8_t c);
-void LCD_Pulse(void);
-void LCD_SendData( uint8_t c);
-void LCD_SendCmd(uint8_t c);
-void LCD_Init(void);
-void LCD_Clear(void);
-void LCD_ReturnHome(void);
-void LCD_noBlink(void);
-void LCD_Blink(void);
 /* Private functions ---------------------------------------------------------*/
-
-
-
-void LCD_WriteNibble(uint8_t c){
-
-  if ( c & 0x8 ) LCD_Port->ODR |= 1 << LCD_D7;
-  else LCD_Port->ODR &= ~(1 << LCD_D7);
-
-  if ( c & 0x4 ) LCD_Port->ODR |= 1 << LCD_D6;
-  else LCD_Port->ODR &= ~(1 << LCD_D6);
-
-  if ( c & 0x2 ) LCD_Port->ODR |= 1 << LCD_D5;
-  else LCD_Port->ODR &= ~(1 << LCD_D5);
-
-  if ( c & 0x1 ) LCD_Port->ODR |= 1 << LCD_D4;
-  else LCD_Port->ODR &= ~(1 << LCD_D4);
-
-  return;
-}
-
-void LCD_Pulse(void){
-
-  LCD_Port->ODR |= 1 << LCD_EN;
-  Delay(4);
-  LCD_Port->ODR &= ~(1 << LCD_EN);
-  Delay(4);
-
-
-}
-
-void LCD_SendData(uint8_t c){
-
-
-  LCD_WriteNibble(c>>4);
-  LCD_Pulse();
-
-  LCD_WriteNibble(c & 0xF);
-  LCD_Pulse();
-}
-void LCD_SendCmd(uint8_t c){
-
-  LCD_Port->ODR &= ~(1<<LCD_RS);
-
-  LCD_WriteNibble(c>>4);
-  LCD_Pulse();
-
-  LCD_WriteNibble( c & 0xF);
-  LCD_Pulse();
-
-  LCD_Port->ODR |= 1 << LCD_RS;
-}
-
-void LCD_Init(void){
-
-  Delay(40);
-  LCD_SendCmd(0x30);
-
-  Delay(5);
-  LCD_SendCmd(0x30);
-
-  Delay(5);
-  LCD_SendCmd(0x30);
-  Delay(5);
-
-  LCD_SendCmd(0x2);
-  Delay(5);
-
-  LCD_SendCmd(0x28);
-  Delay(5);
-
-  //LCD_SendCmd(0x08);
-  //Delay(5);
-
-  LCD_SendCmd(0x01);
-  Delay(5);
-
-  LCD_SendCmd(0x06);
-  Delay(5);
-  LCD_SendCmd(0x0F);
-  Delay(5);
-return;
-}
-
-
-void LCD_Clear(void){
-
-  LCD_SendCmd(0x01);
-  Delay(2000);
-  return;
-}
-
-void LCD_ReturnHome(void){
-  LCD_SendCmd(0x02);
-  Delay(2000);
-}
-
-void LCD_noBlink(void){
-  LCD_SendCmd(0x0E);
-}
-
 uint8_t adc_value_to_temp(const uint16_t value) {
  /* convert reading to millivolts */
   uint16_t conv_value=value;
@@ -160,50 +38,6 @@ return conv_value;
 
 uint16_t adc_steps_per_volt(const uint16_t vref_value) {
  return (vref_value * 10) / 12; /* assume 1.2V internal voltage */
-}
-// SysTick System Handler
-void SysTick_Handler (void){ // SysTick interrupt service routine
-  // TimeDelay is a global variable delcared as volatile
-  if (TimeDelay >0)         // Prevent it from being negative
-    TimeDelay--;            // TimeDelay is global volatile variable
-}
-
-void Delay(uint32_t nTime){
-  // nTime: specifies the delay time Length
-  TimeDelay = nTime;        // Time Delay must be declared as volatile
-  while(TimeDelay != 0);    // Busy wait
-}
-
-// Input: ticks = muber of ticks between two interrupts
-void SysTick_Init (uint32_t ticks){
-
-  //Disable SysTick IRQ and SysTick counter
-  SysTick->CTRL = 0;
-
-  // Set reload register
-  SysTick->LOAD = ticks - 1;
-
-  // Set interrupt priority of SysTick
-  // Make SysTick Least urgent(i.ie., highest priority number)
-  // __NVIC_PRIO_BITS: number of bits for priority levels, defined in CMSIS
-  NVIC_SetPriority(SysTick_IRQn, (1<<__NVIC_PRIO_BITS) -1);
-
-  // Reset the SysTick counter value
-  SysTick->VAL = 0;
-
-  // Select Processor Cycle
-  // 1 = processor clock; 0 = external clock
-  SysTick->CTRL |= SysTick_CTRL_CLKSOURCE_Msk;
-
-  // Enables SysTick exception request
-  // 1 = counting down to zero asserts the SysTick exception request
-  // 0 = counting down to zero does not assert the SysTick exception request
-  SysTick->CTRL |= SysTick_CTRL_TICKINT_Msk;
-
-  // Enable SysTick Timer
-  SysTick->CTRL |= SysTick_CTRL_ENABLE_Msk;
-
-
 }
 
 void ADCx_Init(ADC_TypeDef * ADCx){
@@ -381,26 +215,27 @@ int main(void)
 
   ADCx_Init(ADC1);
 
-  LCD_Init();
+  LCD rgb_lcd;
+  LCD_init(&rgb_lcd,GPIOD,0,0,1,0,0,0,0,2,3,4,6,2,16,LCD_4BITMODE,LCD_5x8DOTS);
+
   char * str;
   str = "Lebron is GOAT";
-  while(*str !=0) LCD_SendData(*str++);
-    Delay(1000);
-    LCD_Clear();
+  while(*str !=0) LCD_write(&rgb_lcd,*str++);
+  Delay(1000);
+
+  LCD_setCursor(&rgb_lcd,0,1);
+  str = "I am legend";
+  while(*str !=0) LCD_write(&rgb_lcd,*str++);
+  Delay(1000);
+  int game = 4;
+  LCD_clearRow(&rgb_lcd,1);
+  LCD_print(&rgb_lcd,"Cavs in %d", game);
+  //LCD_clear(&rgb_lcd);
 
 
   while(1){
-    uint16_t adc_value_temp = adc_read_temp(ADC1);
-    uint8_t temp = adc_value_to_temp(adc_value_temp);
-    char *str1 = "TEMP: ";
-    while(*str1 !=0) LCD_SendData(*str1++);
-    char buffer[7];
-    itoa(adc_value_temp,buffer,10);
-    int i =0;
-    while(buffer[i] !=0){ LCD_SendData(buffer[i]); ++i;}
-    Delay(900);
-    LCD_Clear();
-    //LCD_ReturnHome();
+    //uint16_t adc_value_temp = adc_read_temp(ADC1);
+    //uint8_t temp = adc_value_to_temp(adc_value_temp);
     //uint16_t temp = adc_value_temp;
   }
   return 0;
