@@ -25,6 +25,7 @@ void LCD_init(LCD * LCDx, GPIO_TypeDef * GPIOx,
 
   LCDx->_num_rows = num_rows;
   LCDx->_num_cols = num_cols;
+  LCDx->_displayFunction = 0x0;
 
   if ( LCDx->_num_rows > 1)
     LCDx->_displayFunction |= LCD_2LINE;
@@ -77,12 +78,14 @@ void LCD_init(LCD * LCDx, GPIO_TypeDef * GPIOx,
   LCD_command(LCDx, 0x01);
   Delay(5);
   // Initialize to default text direction (for romance languages)
+  LCDx->_displayMode = 0x0;
   LCDx->_displayMode |= LCD_ENTRYLEFT | LCD_ENTRYSHIFTDECREMENT;
   // set the entry mode
   LCD_command(LCDx, 0x06);
   Delay(5);
 
   // turn the display on with no cursor or blinking default
+  LCDx->_displayControl = 0x0;
   LCDx->_displayControl |= LCD_DISPLAYON | LCD_CURSORON | LCD_BLINKON;
   LCD_command(LCDx,0x0F);
   Delay(5);
@@ -156,14 +159,14 @@ void LCD_setRowOffsets(LCD * LCDx, int row1, int row2, int row3, int row4){
 void LCD_home(LCD * LCDx){
   LCD_command(LCDx, LCD_RETURNHOME);
   // Delay
-  Delay(2);
+  Delay(5);
   return;
 }
 
 void LCD_clear(LCD * LCDx){
   LCD_command(LCDx, LCD_CLEARDISPLAY);
   //Delay
-  Delay(2); // this command takes a long time!
+  Delay(5); // this command takes a long time!
   return;
 }
 

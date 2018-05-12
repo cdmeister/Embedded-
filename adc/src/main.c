@@ -24,9 +24,9 @@
 /* Private variables ---------------------------------------------------------*/
 /* Private function prototypes -----------------------------------------------*/
 /* Private functions ---------------------------------------------------------*/
-uint8_t adc_value_to_temp(const uint16_t value) {
+float adc_value_to_temp(const uint16_t value) {
  /* convert reading to millivolts */
-  uint16_t conv_value=value;
+  float conv_value=value;
   conv_value *= 3300;
   conv_value /= 0xfff; //Reading in mV
   conv_value /= 1000.0; //Reading in Volts
@@ -216,8 +216,9 @@ int main(void)
   ADCx_Init(ADC1);
 
   LCD rgb_lcd;
-  LCD_init(&rgb_lcd,GPIOD,0,0,1,0,0,0,0,2,3,4,6,2,16,LCD_4BITMODE,LCD_5x8DOTS);
-
+  LCD_init(&rgb_lcd,GPIOD,0,0,1,0,0,0,0,2,3,4,6,4,20,LCD_4BITMODE,LCD_5x8DOTS);
+  LCD_setRowOffsets(&rgb_lcd,0x00,0x40,0x14,0x54);
+  LCD_clear(&rgb_lcd);
   char * str;
   str = "Lebron is GOAT";
   while(*str !=0) LCD_write(&rgb_lcd,*str++);
@@ -230,13 +231,32 @@ int main(void)
   int game = 4;
   LCD_clearRow(&rgb_lcd,1);
   LCD_print(&rgb_lcd,"Cavs in %d", game);
+  Delay(1000);
+  LCD_setCursor(&rgb_lcd,0,2);
+  LCD_print(&rgb_lcd,"Boston is toast");
+  Delay(1000);
+  LCD_setCursor(&rgb_lcd,0,3);
+  LCD_print(&rgb_lcd,"LeBron is my Hero");
+  Delay(1000);
+  LCD_clearRow(&rgb_lcd,3);
+  LCD_print(&rgb_lcd, "I want the \x23%d pick",1);
+  Delay(1000);
+
   //LCD_clear(&rgb_lcd);
-
-
+  LCD_home(&rgb_lcd);
+  LCD_setCursor(&rgb_lcd, 0,0);
+  LCD_noCursor(&rgb_lcd);
+  LCD_noBlink(&rgb_lcd);
   while(1){
-    //uint16_t adc_value_temp = adc_read_temp(ADC1);
-    //uint8_t temp = adc_value_to_temp(adc_value_temp);
-    //uint16_t temp = adc_value_temp;
+    uint16_t adc_value_temp = adc_read_temp(ADC1);
+    float temp = adc_value_to_temp(adc_value_temp);
+    LCD_print(&rgb_lcd, "ADC TEMP: %d", adc_value_temp);
+    LCD_setCursor(&rgb_lcd, 0,1);
+    Delay(20);
+    LCD_print(&rgb_lcd,"TEMP: %4.2f\xDF%c", temp,'C');
+    Delay(20);
+    LCD_home(&rgb_lcd);
+
   }
   return 0;
 }
