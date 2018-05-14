@@ -17,6 +17,7 @@
 #include "string.h"
 #include "stdlib.h"
 #include "stdio.h"
+#include "math.h"
 /* Exported types ------------------------------------------------------------*/
 /* Exported constants --------------------------------------------------------*/
 /* Exported macro ------------------------------------------------------------*/

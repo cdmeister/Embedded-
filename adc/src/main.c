@@ -19,7 +19,9 @@
 /* Private define ------------------------------------------------------------*/
 #define ADC_TEMPERATURE_V25       760  /* mV */
 #define ADC_TEMPERATURE_AVG_SLOPE 2500 /* mV/C */
-
+uint16_t * temp_30 = (uint16_t *) ((uint32_t)0x1FFF7A2C);
+uint16_t * temp_110 =(uint16_t *) ((uint32_t)0x1FFF7A2E);
+uint16_t * vref_cal =(uint16_t *) 0x1FFF7A2A;
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 /* Private function prototypes -----------------------------------------------*/
@@ -27,12 +29,13 @@
 float adc_value_to_temp(const uint16_t value) {
  /* convert reading to millivolts */
   float conv_value=value;
-  conv_value *= 3300;
-  conv_value /= 0xfff; //Reading in mV
-  conv_value /= 1000.0; //Reading in Volts
+  conv_value *= 3;
+  conv_value /= 4096; //Reading in mV
+  //conv_value /= 1000.0; //Reading in Volts
   conv_value -= 0.760; // Subtract the reference voltage at 25°C
   conv_value /= .0025; // Divide by slope 2.5mV
   conv_value += 25.0; // Add the 25°C
+  //conv_value -= 11.0; // Add the 25°C
 return conv_value;
 }
 
@@ -108,6 +111,27 @@ void ADCx_Init(ADC_TypeDef * ADCx){
 
 }
 
+uint16_t adc_read(ADC_TypeDef * ADCx){
+
+  /* Configure Channel For requested channel */
+  ADCx->SQR3 &= ~(ADC_SQR3_SQ1);
+  ADCx->SQR3 |= (ADC_SQR3_SQ1_3|ADC_SQR3_SQ1_1|ADC_SQR3_SQ1_0); // Channel 16 for temp sensor on stm32f4 disc
+  // Sample Time is 480 cycles
+  ADCx->SMPR1 |= ADC_SMPR1_SMP11;
+
+
+  /* Enable the selected ADC conversion for regular group */
+  ADCx->CR2 |= (uint32_t)ADC_CR2_SWSTART;
+
+  /* wait for end of conversion */
+  while((ADCx->SR & ADC_SR_EOC) == 0);
+
+ return (uint16_t) ADCx->DR ;
+
+
+
+}
+
 uint16_t adc_read_temp(ADC_TypeDef* ADCx) {
 
   /* Configure Channel For Temp Sensor */
@@ -128,7 +152,7 @@ uint16_t adc_read_temp(ADC_TypeDef* ADCx) {
 
 uint16_t adc_read_vref(ADC_TypeDef* ADCx) {
   /* Configure Channel For Vref*/
-  ADCx->SQR3 &= ~(ADC_SQR3_SQ2);
+  ADCx->SQR3 &= ~(ADC_SQR3_SQ1);
   // Channel 17 for vref on stm32f4 disc
   ADCx->SQR3 |= (ADC_SQR3_SQ1_4|ADC_SQR3_SQ1_0);
   // Sample Time is 480 cycles
@@ -165,7 +189,7 @@ int main(void)
   // Enable GPIO clock and configure the Tx pin and the Rx pin as
   // Alternating functions, High Speed, Push-pull, Pull-up
 
-  RCC->AHB1ENR |= (RCC_AHB1ENR_GPIODEN);
+  RCC->AHB1ENR |= (RCC_AHB1ENR_GPIODEN|RCC_AHB1ENR_GPIOCEN);
 
  // Set mode of all pins as digital output
   // 00 = digital input         01 = digital output
@@ -178,12 +202,16 @@ int main(void)
                   | GPIO_MODER_MODE3_0|GPIO_MODER_MODE2_0 //output
                   | GPIO_MODER_MODE1_0|GPIO_MODER_MODE0_0); //output
 
+  GPIOC->MODER &=~(GPIO_MODER_MODE1);
+  GPIOC->MODER |= (GPIO_MODER_MODE1_0|GPIO_MODER_MODE1_1);
+
   // Set output tupe of all pins as push-pull
   // 0 = push-pull (default)
   // 1 = open-drain
   GPIOD->OTYPER &= ~( GPIO_OTYPER_OT6 | GPIO_OTYPER_OT4
                     | GPIO_OTYPER_OT3 | GPIO_OTYPER_OT2
                     | GPIO_OTYPER_OT1 | GPIO_OTYPER_OT0);
+  GPIOC->OTYPER &= ~( GPIO_OTYPER_OT1);
 
   // Set output speed of all pins as high
   // 00 = Low speed           01 = Medium speed
@@ -196,6 +224,10 @@ int main(void)
                     | GPIO_OSPEEDR_OSPEED3|GPIO_OSPEEDR_OSPEED2
                     | GPIO_OSPEEDR_OSPEED1|GPIO_OSPEEDR_OSPEED0); /* Configure as high speed */
 
+  GPIOC->OSPEEDR &=~(GPIO_OSPEEDR_OSPEED1); /* Configure as high speed */
+
+  GPIOC->OSPEEDR |= (GPIO_OSPEEDR_OSPEED1); /* Configure as high speed */
+
 
   // Set all pins as no pull-up, no pull-down
   // 00 = no pull-up, no pull-down    01 = pull-up
@@ -204,6 +236,7 @@ int main(void)
                     |GPIO_PUPDR_PUPD3|GPIO_PUPDR_PUPD2
                     |GPIO_PUPDR_PUPD1|GPIO_PUPDR_PUPD0);
 
+  GPIOC->PUPDR &= ~(GPIO_PUPDR_PUPD1);
 
     // Generate and interrupt every 1ms
   // http://www.electronics-homemade.com/STM32F4-LED-Toggle-Systick.html
@@ -219,7 +252,7 @@ int main(void)
   LCD_init(&rgb_lcd,GPIOD,0,0,1,0,0,0,0,2,3,4,6,4,20,LCD_4BITMODE,LCD_5x8DOTS);
   LCD_setRowOffsets(&rgb_lcd,0x00,0x40,0x14,0x54);
   LCD_clear(&rgb_lcd);
-  char * str;
+  /*char * str;
   str = "Lebron is GOAT";
   while(*str !=0) LCD_write(&rgb_lcd,*str++);
   Delay(1000);
@@ -241,12 +274,23 @@ int main(void)
   LCD_clearRow(&rgb_lcd,3);
   LCD_print(&rgb_lcd, "I want the \x23%d pick",1);
   Delay(1000);
-
-  //LCD_clear(&rgb_lcd);
-  LCD_home(&rgb_lcd);
+*/
+  LCD_clear(&rgb_lcd);
+  //LCD_home(&rgb_lcd);
   LCD_setCursor(&rgb_lcd, 0,0);
   LCD_noCursor(&rgb_lcd);
   LCD_noBlink(&rgb_lcd);
+
+  /*float slope =-1 *((float)(110-30))/((float)(*temp_30-*temp_110));
+  LCD_print(&rgb_lcd, "Slope: %3.5f", slope);
+  LCD_setCursor(&rgb_lcd,0,1);
+  LCD_print(&rgb_lcd, "30: %d", *temp_30);
+  LCD_setCursor(&rgb_lcd,0,2);
+  LCD_print(&rgb_lcd, "100: %d", *temp_110);
+
+  Delay(5000);
+  LCD_clear(&rgb_lcd);
+  */
   while(1){
     uint16_t adc_value_temp = adc_read_temp(ADC1);
     float temp = adc_value_to_temp(adc_value_temp);
@@ -255,6 +299,24 @@ int main(void)
     Delay(20);
     LCD_print(&rgb_lcd,"TEMP: %4.2f\xDF%c", temp,'C');
     Delay(20);
+    LCD_setCursor(&rgb_lcd, 0,2);
+    uint16_t adc_pot = adc_read(ADC1);
+    //float pot_volt = (3.0/4095)*adc_pot;
+    //LCD_print(&rgb_lcd,"ADC: %-4d Vol: %1.3f", adc_pot, pot_volt);
+    float thermistor_res =10000/((4095.0/adc_pot)-1.0);
+    LCD_print(&rgb_lcd,"ADC %4d %4.2f", adc_pot,thermistor_res );
+    Delay(20);
+    LCD_setCursor(&rgb_lcd, 0,3);
+    //uint16_t adc_vref = adc_read_vref(ADC1);
+    //LCD_print(&rgb_lcd,"VREF %-4d ADC %-4d ", adc_vref, *vref_cal);
+    float steinhart;
+    steinhart = thermistor_res / 10000;     // (R/Ro)
+    steinhart = log(steinhart);                  // ln(R/Ro)
+    steinhart /= 3522;                   // 1/B * ln(R/Ro)
+    steinhart += 1.0 / (25 + 273.15); // + (1/To)
+    steinhart = 1.0 / steinhart;                 // Invert
+    steinhart -= 273.15;                         // convert to C
+    LCD_print(&rgb_lcd,"TEMP: %4.2f", steinhart);
     LCD_home(&rgb_lcd);
 
   }
