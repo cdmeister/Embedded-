@@ -252,45 +252,14 @@ int main(void)
   LCD_init(&rgb_lcd,GPIOD,0,0,1,0,0,0,0,2,3,4,6,4,20,LCD_4BITMODE,LCD_5x8DOTS);
   LCD_setRowOffsets(&rgb_lcd,0x00,0x40,0x14,0x54);
   LCD_clear(&rgb_lcd);
-  /*char * str;
-  str = "Lebron is GOAT";
-  while(*str !=0) LCD_write(&rgb_lcd,*str++);
-  Delay(1000);
 
-  LCD_setCursor(&rgb_lcd,0,1);
-  str = "I am legend";
-  while(*str !=0) LCD_write(&rgb_lcd,*str++);
-  Delay(1000);
-  int game = 4;
-  LCD_clearRow(&rgb_lcd,1);
-  LCD_print(&rgb_lcd,"Cavs in %d", game);
-  Delay(1000);
-  LCD_setCursor(&rgb_lcd,0,2);
-  LCD_print(&rgb_lcd,"Boston is toast");
-  Delay(1000);
-  LCD_setCursor(&rgb_lcd,0,3);
-  LCD_print(&rgb_lcd,"LeBron is my Hero");
-  Delay(1000);
-  LCD_clearRow(&rgb_lcd,3);
-  LCD_print(&rgb_lcd, "I want the \x23%d pick",1);
-  Delay(1000);
-*/
   LCD_clear(&rgb_lcd);
   //LCD_home(&rgb_lcd);
   LCD_setCursor(&rgb_lcd, 0,0);
   LCD_noCursor(&rgb_lcd);
   LCD_noBlink(&rgb_lcd);
 
-  /*float slope =-1 *((float)(110-30))/((float)(*temp_30-*temp_110));
-  LCD_print(&rgb_lcd, "Slope: %3.5f", slope);
-  LCD_setCursor(&rgb_lcd,0,1);
-  LCD_print(&rgb_lcd, "30: %d", *temp_30);
-  LCD_setCursor(&rgb_lcd,0,2);
-  LCD_print(&rgb_lcd, "100: %d", *temp_110);
-
   Delay(5000);
-  LCD_clear(&rgb_lcd);
-  */
   while(1){
     uint16_t adc_value_temp = adc_read_temp(ADC1);
     float temp = adc_value_to_temp(adc_value_temp);
@@ -299,24 +268,6 @@ int main(void)
     Delay(20);
     LCD_print(&rgb_lcd,"TEMP: %4.2f\xDF%c", temp,'C');
     Delay(20);
-    LCD_setCursor(&rgb_lcd, 0,2);
-    uint16_t adc_pot = adc_read(ADC1);
-    //float pot_volt = (3.0/4095)*adc_pot;
-    //LCD_print(&rgb_lcd,"ADC: %-4d Vol: %1.3f", adc_pot, pot_volt);
-    float thermistor_res =10000/((4095.0/adc_pot)-1.0);
-    LCD_print(&rgb_lcd,"ADC %4d %4.2f", adc_pot,thermistor_res );
-    Delay(20);
-    LCD_setCursor(&rgb_lcd, 0,3);
-    //uint16_t adc_vref = adc_read_vref(ADC1);
-    //LCD_print(&rgb_lcd,"VREF %-4d ADC %-4d ", adc_vref, *vref_cal);
-    float steinhart;
-    steinhart = thermistor_res / 10000;     // (R/Ro)
-    steinhart = log(steinhart);                  // ln(R/Ro)
-    steinhart /= 3522;                   // 1/B * ln(R/Ro)
-    steinhart += 1.0 / (25 + 273.15); // + (1/To)
-    steinhart = 1.0 / steinhart;                 // Invert
-    steinhart -= 273.15;                         // convert to C
-    LCD_print(&rgb_lcd,"TEMP: %4.2f", steinhart);
     LCD_home(&rgb_lcd);
 
   }
