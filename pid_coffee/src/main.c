@@ -28,7 +28,7 @@ uint16_t * temp_30 = (uint16_t *) ((uint32_t)0x1FFF7A2C);
 uint16_t * temp_110 =(uint16_t *) ((uint32_t)0x1FFF7A2E);
 uint16_t * vref_cal =(uint16_t *) 0x1FFF7A2A;
 volatile uint32_t counter_toggle;
-const uint32_t one_sec =100;
+const uint32_t one_sec =50;
 
 
 /* Private macro -------------------------------------------------------------*/
@@ -49,10 +49,15 @@ void TIM4_IRQHandler(void){
     }
     TIM4->SR &= ~TIM_SR_CC2IF;
   }
-  /*if((TIM4->SR & TIM_SR_CC4IF) != 0){
+  if((TIM4->SR & TIM_SR_CC4IF) != 0){
     GPIOD->ODR ^=(PORTD_13);
+    if(TIM4->CCR4==TIM4->ARR)
+      TIM4->CCR4 =0;
+    else
+      TIM4->CCR4+=1;
+
     TIM4->SR &= ~TIM_SR_CC4IF;
-  }*/
+  }
   // Check whether an overflow event has taken place
   /*if((TIM4->SR & TIM_SR_UIF) != 0){
 
@@ -221,12 +226,12 @@ void timer_init(void){
   TIM4->CR1 |=(TIM_CR1_ARPE);
 
   //Clock Prescaler
-  uint32_t TIM4COUNTER_Frequency = 1000000; //Desired Frequency
+  uint32_t TIM4COUNTER_Frequency = 100000; //Desired Frequency
   TIM4->PSC = (84000000/TIM4COUNTER_Frequency)-1;
   //TIM4->PSC = 62499;
 
   //Auto Reload: up-counting (0-> ARR), down-counting (ARR -> 0)
-  TIM4->ARR = .01 * 1000000-1;
+  TIM4->ARR = (.02*TIM4COUNTER_Frequency)-1;
   //TIM4->ARR = 1343;
 
   // ------------------Channel 2 Setup ----------------------------------
@@ -244,7 +249,7 @@ void timer_init(void){
   //TIM4->CCR3=.5*TIM4->ARR;
   TIM4->CCR2 = TIM4->ARR;
 
-  // Clear Output compare mode bits for channel 3
+  // Clear Output compare mode bits for channel 2
   TIM4->CCMR1 &= ~TIM_CCMR1_OC2M;
 
   // Select Pulse Width Modulation Mode 1
@@ -277,8 +282,8 @@ void timer_init(void){
 
   // Set the first value to compare against
   // 50% duty cycle
-  //TIM4->CCR3=.5*TIM4->ARR;
-  TIM4->CCR3 = 0;
+  TIM4->CCR3=.01*TIM4->ARR;
+  //TIM4->CCR3 = 0;
 
   // Clear Output compare mode bits for channel 3
   TIM4->CCMR2 &= ~TIM_CCMR2_OC3M;
@@ -312,7 +317,8 @@ void timer_init(void){
   TIM4->CCMR2 &= ~(TIM_CCMR2_CC4S);
 
   // Set the first value to compare against
-  TIM4->CCR4=0;
+  TIM4->CCR4 = TIM4->ARR;
+  //TIM4->CCR4=0;
 
   // Clear Output compare mode bits for channel 1
   TIM4->CCMR2 &= ~TIM_CCMR2_OC4M;
@@ -344,13 +350,13 @@ void timer_init(void){
   // Center Align Mode Selection
   TIM4->CR1 &=~(TIM_CR1_CMS);
 
-  //Clear interrupt status only on channel 3 and 4
+  //Clear interrupt status only on channel 2 and 4
 
-  TIM4->SR &= ~(TIM_SR_CC2IF);
+  TIM4->SR &= ~(TIM_SR_CC2IF|TIM_SR_CC4IF);
 
-  //Enable interrupts only on channel 3 and 4
+  //Enable interrupts only on channel 2 and 4
 
-  TIM4->DIER |= (TIM_DIER_CC2IE);
+  TIM4->DIER |= (TIM_DIER_CC2IE|TIM_DIER_CC4IE);
 
 
   // Set TIM4 priority to 1
@@ -504,7 +510,7 @@ int main(void)
   Delay(5000);
   LCD_clear(&rgb_lcd);
   */
-  const int max_brightness = TIM4->ARR;
+  //const int max_brightness = TIM4->ARR;
   while(1){
     uint16_t adc_value_temp = adc_read_temp(ADC1);
     float temp = adc_value_to_temp(adc_value_temp);
@@ -533,12 +539,11 @@ int main(void)
     LCD_print(&rgb_lcd,"TEMP: %4.2f", steinhart);
     LCD_home(&rgb_lcd);
 
-   GPIOD->ODR ^=PORTD_13;
-   Delay(1000);
+   Delay(50);
    // GPIOD->ODR ^=PORTD_14;
    // GPIOD->ODR ^=PORTD_15;
     //Delay(500);
-    int i=0;
+    /*int i=0;
     for(;i<max_brightness;i+=1){
       TIM4->CCR4=i;
       TIM4->CCR3=i;
@@ -548,7 +553,7 @@ int main(void)
       TIM4->CCR4=i;
       TIM4->CCR3=i;
       Delay(1);
-    }
+    }*/
 
   }
   return 0;
