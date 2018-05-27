@@ -13,7 +13,7 @@
 #include "main.h"
 #include "systick.h"
 #include "lcd.h"
-
+#include "clock.h"
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
@@ -210,6 +210,15 @@ uint16_t adc_read_vref(ADC_TypeDef* ADCx) {
  return (uint16_t) ADCx->DR ;
 }
 
+uint32_t GetTimerClock(void){
+
+  uint8_t apb2_prescaler = GetAPB2Prescaler();
+  uint32_t HCLK = GetHCLK();
+  uint32_t PCLK2 = GetPCLK2();
+  if (apb2_prescaler == 1) return HCLK;
+  else return PCLK2 * 2;
+}
+
 void timer_init(void){
 
   // Enable Timer 4 clock
@@ -226,8 +235,9 @@ void timer_init(void){
   TIM4->CR1 |=(TIM_CR1_ARPE);
 
   //Clock Prescaler
+  uint32_t TimerClock = GetTimerClock();
   uint32_t TIM4COUNTER_Frequency = 100000; //Desired Frequency
-  TIM4->PSC = (84000000/TIM4COUNTER_Frequency)-1;
+  TIM4->PSC = (TimerClock/TIM4COUNTER_Frequency)-1;
   //TIM4->PSC = 62499;
 
   //Auto Reload: up-counting (0-> ARR), down-counting (ARR -> 0)
@@ -462,6 +472,7 @@ int main(void)
   // but the LOAD register is only 24-bit so you can't fit 168 000 000. Instead
   // you can generate an interupt every 1ms so that would be 168 000 ticks per
   // ms and you can fit 168 000 ticks into the LOAD register
+  SystemCoreClockUpdate();
   SysTick_Init(SystemCoreClock/1000);
 
   ADCx_Init(ADC1);
@@ -471,6 +482,33 @@ int main(void)
   LCD_init(&rgb_lcd,GPIOD,0,0,1,0,0,0,0,2,3,4,6,4,20,LCD_4BITMODE,LCD_5x8DOTS);
   LCD_setRowOffsets(&rgb_lcd,0x00,0x40,0x14,0x54);
   LCD_clear(&rgb_lcd);
+
+  SystemHSIenable(0,0,4);
+  SystemCoreClockUpdate();
+  SysTick_Init(SystemCoreClock/1000);
+  ADCx_Init(ADC1);
+  timer_init();
+  LCD_init(&rgb_lcd,GPIOD,0,0,1,0,0,0,0,2,3,4,6,4,20,LCD_4BITMODE,LCD_5x8DOTS);
+  LCD_setRowOffsets(&rgb_lcd,0x00,0x40,0x14,0x54);
+  LCD_clear(&rgb_lcd);
+  LCD_print(&rgb_lcd,"Current Clock %d",SystemCoreClock);
+  Delay(1000);
+  uint32_t timer_clock = GetTimerClock();
+  uint16_t ahb_prescaler = GetAPB2Prescaler();
+  uint32_t HCLK = GetHCLK();
+  uint32_t PCLK2 = GetPCLK2();
+  LCD_clear(&rgb_lcd);
+  LCD_print(&rgb_lcd,"Timer Clock %d",timer_clock);
+  LCD_setCursor(&rgb_lcd, 0,1);
+  LCD_print(&rgb_lcd, "HCLK %d",HCLK);
+  LCD_setCursor(&rgb_lcd, 0,2);
+  LCD_print(&rgb_lcd, "PCLK2 %d",PCLK2);
+  LCD_setCursor(&rgb_lcd, 0,3);
+  LCD_print(&rgb_lcd, "AHB PRE %d",ahb_prescaler);
+Delay(5000);
+
+
+
   /*char * str;
   str = "Lebron is GOAT";
   while(*str !=0) LCD_write(&rgb_lcd,*str++);

@@ -39,7 +39,8 @@ C_SOURCES =  \
 src/main.c \
 src/system_stm32f4xx.c \
 src/systick.c \
-src/lcd.c
+src/lcd.c \
+src/clock.c
 
 # ASM sources
 ASM_SOURCES =  \

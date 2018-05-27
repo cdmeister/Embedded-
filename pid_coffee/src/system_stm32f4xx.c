@@ -408,6 +408,8 @@ static void SetSysClock(void){
     /* Wait till the main PLL is used as system clock source */
     while ((RCC->CFGR & (uint32_t)RCC_CFGR_SWS ) != RCC_CFGR_SWS_PLL){}
 
+    /* Turn off HSI clock since PLL is used as system clock*/
+    RCC->CR &=~(RCC_CR_HSION);
     /*Debug only, check if it works */
 
     /* Enable Clock */

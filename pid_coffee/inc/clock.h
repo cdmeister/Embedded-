@@ -22,10 +22,26 @@
 #include "stdio.h"
 #include "stdarg.h"
 /* Exported types ------------------------------------------------------------*/
-
 /* Exported constants --------------------------------------------------------*/
 /* Exported macro ------------------------------------------------------------*/
-
 /* Exported functions ------------------------------------------------------- */
+extern void SystemPLLClockUpdate(void);
+extern void SystemHSIenable(uint16_t ahb_prescaler,
+                            uint8_t  apb1_prescaler,
+                            uint8_t apb2_prescaler);
+extern void SystemHSEenable(uint16_t ahb_prescaler,
+                            uint8_t  apb1_prescaler,
+                            uint8_t apb2_prescaler);
+
+extern void SystemClockPrescaler(uint16_t ahb_prescaler,
+                            uint8_t  apb1_prescaler,
+                            uint8_t apb2_prescaler);
+extern void SystemPLLClockUpdate(void);
+
+extern uint16_t GetAHBPrescaler(void);
+extern uint8_t GetAPB1Prescaler(void);
+extern uint8_t GetAPB2Prescaler(void);
+extern uint32_t GetHCLK(void);
+extern uint32_t GetPCLK2(void);
 
 #endif /* __CLOCK_H */

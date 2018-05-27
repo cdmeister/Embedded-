@@ -50,6 +50,41 @@ void SystemHSIenable(uint16_t ahb_prescaler, uint8_t  apb1_prescaler,
   SystemCoreClockUpdate();
 }
 
+void SystemHSEenable(uint16_t ahb_prescaler, uint8_t  apb1_prescaler,
+                      uint8_t apb2_prescaler){
+
+  /* Read the SWS to know what is the current clock selected */
+  uint32_t current_clock = RCC->CFGR & RCC_CFGR_SWS;
+
+  /* Enable HSI clock */
+	RCC->CR |= RCC_CR_HSEON;
+
+	/* Wait till HSI is ready */
+	while (!(RCC->CR & RCC_CR_HSERDY)){};
+
+  /* Select HSI clock as main clock */
+	RCC->CFGR = (RCC->CFGR & ~(RCC_CFGR_SW)) | RCC_CFGR_SW_HSE;
+  /* wait til HSI is selected as main clock */
+  while((RCC->CFGR & RCC_CFGR_SWS) != RCC_CFGR_SWS_HSE){}
+
+  /* Set the prescalers accordingly for HSI */
+  SystemClockPrescaler(ahb_prescaler,apb1_prescaler,apb2_prescaler);
+
+  /* Program the wait states */
+  FLASH->ACR = (FLASH->ACR & ~(FLASH_ACR_LATENCY)) |FLASH_ACR_LATENCY_0WS;
+
+
+  if(current_clock == RCC_CFGR_SWS_HSI){
+    RCC->CR &=~(RCC_CR_HSION);
+
+  }
+  else{
+    RCC->CR &=~(RCC_CR_PLLON);
+  }
+  SystemCoreClockUpdate();
+}
+
+
 void SystemClockPrescaler(uint16_t ahb_prescaler, uint8_t  apb1_prescaler,
                       uint8_t apb2_prescaler){
 
