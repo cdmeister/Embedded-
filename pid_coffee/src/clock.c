@@ -62,9 +62,9 @@ void SystemHSEenable(uint16_t ahb_prescaler, uint8_t  apb1_prescaler,
 	/* Wait till HSI is ready */
 	while (!(RCC->CR & RCC_CR_HSERDY)){};
 
-  /* Select HSI clock as main clock */
+  /* Select HSE clock as main clock */
 	RCC->CFGR = (RCC->CFGR & ~(RCC_CFGR_SW)) | RCC_CFGR_SW_HSE;
-  /* wait til HSI is selected as main clock */
+  /* wait til HSE is selected as main clock */
   while((RCC->CFGR & RCC_CFGR_SWS) != RCC_CFGR_SWS_HSE){}
 
   /* Set the prescalers accordingly for HSI */
@@ -194,11 +194,18 @@ uint8_t GetAPB2Prescaler(void){
   else return APBxPrescTable[apb2_prescaler&0x3];
 
 }
-
+/* HCLK is the core clock */
 uint32_t GetHCLK(void){
 
   uint16_t hpre_prescaler = GetAHBPrescaler();
   return SystemCoreClock/hpre_prescaler;
+
+}
+
+uint32_t GetPCLK1(void){
+  uint32_t HCLK = GetHCLK();
+  uint8_t apb1_prescaler = GetAPB1Prescaler();
+  return HCLK/apb1_prescaler;
 
 }
 
