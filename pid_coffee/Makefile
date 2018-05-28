@@ -40,7 +40,8 @@ src/main.c \
 src/system_stm32f4xx.c \
 src/systick.c \
 src/lcd.c \
-src/clock.c
+src/clock.c \
+src/flash.c
 
 # ASM sources
 ASM_SOURCES =  \

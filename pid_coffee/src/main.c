@@ -483,7 +483,7 @@ int main(void)
   LCD_setRowOffsets(&rgb_lcd,0x00,0x40,0x14,0x54);
   LCD_clear(&rgb_lcd);
 
-  SystemHSIenable(0,0,4);
+  SystemHSIenable(1,1,4);
   SystemCoreClockUpdate();
   SysTick_Init(SystemCoreClock/1000);
   ADCx_Init(ADC1);
