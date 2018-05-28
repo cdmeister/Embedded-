@@ -212,11 +212,11 @@ uint16_t adc_read_vref(ADC_TypeDef* ADCx) {
 
 uint32_t GetTimerClock(void){
 
-  uint8_t apb2_prescaler = GetAPB2Prescaler();
+  uint8_t apb1_prescaler = GetAPB1Prescaler();
   uint32_t HCLK = GetHCLK();
-  uint32_t PCLK2 = GetPCLK2();
-  if (apb2_prescaler == 1) return HCLK;
-  else return PCLK2 * 2;
+  uint32_t PCLK1 = GetPCLK1();
+  if (apb1_prescaler == 1) return HCLK;
+  else return PCLK1 * 2;
 }
 
 void timer_init(void){
@@ -484,7 +484,6 @@ int main(void)
   LCD_clear(&rgb_lcd);
 
   SystemHSIenable(1,1,4);
-  SystemCoreClockUpdate();
   SysTick_Init(SystemCoreClock/1000);
   ADCx_Init(ADC1);
   timer_init();
@@ -505,8 +504,35 @@ int main(void)
   LCD_print(&rgb_lcd, "PCLK2 %d",PCLK2);
   LCD_setCursor(&rgb_lcd, 0,3);
   LCD_print(&rgb_lcd, "AHB PRE %d",ahb_prescaler);
-Delay(5000);
+Delay(3000);
 
+  SystemPLLClockEnable(1,4,2,8,336,2,7);
+  SysTick_Init(SystemCoreClock/1000);
+  ADCx_Init(ADC1);
+  timer_init();
+  LCD_init(&rgb_lcd,GPIOD,0,0,1,0,0,0,0,2,3,4,6,4,20,LCD_4BITMODE,LCD_5x8DOTS);
+  LCD_setRowOffsets(&rgb_lcd,0x00,0x40,0x14,0x54);
+  LCD_clear(&rgb_lcd);
+  LCD_print(&rgb_lcd,"Clock %dMHZ",SystemCoreClock/1000000);
+  //uint32_t tmp = RCC->CFGR & RCC_CFGR_SWS;
+  //LCD_setCursor(&rgb_lcd, 0,2);
+  //LCD_print(&rgb_lcd,"Clock Source %x",tmp);
+
+  Delay(3000);
+
+  timer_clock = GetTimerClock();
+  ahb_prescaler = GetAPB2Prescaler();
+  HCLK = GetHCLK();
+  PCLK2 = GetPCLK2();
+  LCD_clear(&rgb_lcd);
+  LCD_print(&rgb_lcd,"Timer Clock %d",timer_clock);
+  LCD_setCursor(&rgb_lcd, 0,1);
+  LCD_print(&rgb_lcd, "HCLK %d",HCLK);
+  LCD_setCursor(&rgb_lcd, 0,2);
+  LCD_print(&rgb_lcd, "PCLK2 %d",PCLK2);
+  LCD_setCursor(&rgb_lcd, 0,3);
+  LCD_print(&rgb_lcd, "AHB PRE %d",ahb_prescaler);
+Delay(5000);
 
 
   /*char * str;

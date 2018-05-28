@@ -83,6 +83,6 @@
 
  +-------------------------------------------------------------------------------------------------------------------+ */
 extern void SetFlashWaitState(uint16_t ahb_prescaler,uint8_t pll_m,
-                            uint8_t pll_n, uint8_t pll_p);
+                            uint16_t pll_n, uint8_t pll_p);
 extern uint32_t GetFlashWaitState(uint32_t projected_hclk);
 #endif /* __FLASH_H */

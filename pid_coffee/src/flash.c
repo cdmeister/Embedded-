@@ -27,7 +27,7 @@ uint32_t GetFlashWaitState(uint32_t projected_hclk){
 }
 
 void SetFlashWaitState(uint16_t ahb_prescaler,
-                      uint8_t pll_m,uint8_t pll_n, uint8_t pll_p){
+                      uint8_t pll_m,uint16_t pll_n, uint8_t pll_p){
 
   uint32_t pll_vco = (HSE_VALUE/pll_m)*pll_n;
   uint32_t projected_sysclk = pll_vco/pll_p;

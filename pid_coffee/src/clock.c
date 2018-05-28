@@ -8,7 +8,7 @@ static uint8_t APBxPrescTable[4]={2,4,8,16};
  * clock via PLL
  */
 void SystemPLLClockEnable(uint16_t ahb_prescaler, uint8_t  apb1_prescaler,
-                          uint8_t apb2_prescaler, uint8_t pll_m, uint8_t pll_n,
+                          uint8_t apb2_prescaler, uint8_t pll_m, uint16_t pll_n,
                           uint8_t pll_p, uint8_t pll_q){
 
 
@@ -55,6 +55,7 @@ void SystemPLLClockEnable(uint16_t ahb_prescaler, uint8_t  apb1_prescaler,
   while ((RCC->CFGR & (uint32_t)RCC_CFGR_SWS ) != RCC_CFGR_SWS_PLL){}
 
 
+  SystemCoreClockUpdate();
 }
 
 
@@ -252,7 +253,7 @@ void SystemClockPrescaler(uint16_t ahb_prescaler, uint8_t  apb1_prescaler,
 
 }
 
-void SystemPLLPrescaler(uint8_t pll_m, uint8_t pll_n,
+void SystemPLLPrescaler(uint8_t pll_m, uint16_t pll_n,
                         uint8_t pll_p, uint8_t pll_q){
 
   /*Configre the multiplier and division factors to the RCC_PLLCFGR Register*/

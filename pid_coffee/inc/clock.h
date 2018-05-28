@@ -35,20 +35,20 @@ extern void SystemHSEenable(uint16_t ahb_prescaler,
 extern void SystemPLLClockEnable(uint16_t ahb_prescaler,
                             uint8_t  apb1_prescaler,
                             uint8_t apb2_prescaler,
-                            uint8_t pll_m, uint8_t pll_n,
+                            uint8_t pll_m, uint16_t pll_n,
                             uint8_t pll_p, uint8_t pll_q);
 
 extern void SystemPLLClockUpdate(uint16_t ahb_prescaler,
                             uint8_t  apb1_prescaler,
                             uint8_t apb2_prescaler,
-                            uint8_t pll_m, uint8_t pll_n,
+                            uint8_t pll_m, uint16_t pll_n,
                             uint8_t pll_p, uint8_t pll_q);
 
 extern void SystemClockPrescaler(uint16_t ahb_prescaler,
                             uint8_t  apb1_prescaler,
                             uint8_t apb2_prescaler);
 
-extern void SystemPLLPrescaler(uint8_t pll_m, uint8_t pll_n,
+extern void SystemPLLPrescaler(uint8_t pll_m, uint16_t pll_n,
                               uint8_t pll_p, uint8_t pll_q);
 
 extern uint16_t GetAHBPrescaler(void);
