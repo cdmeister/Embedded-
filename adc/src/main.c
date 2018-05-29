@@ -83,8 +83,8 @@ void ADCx_Init(ADC_TypeDef * ADCx){
   // Resolution ot 12-bits
   ADCx->CR1 &= ~(ADC_CR1_RES);
 
-  // Scan Mode
-  ADCx->CR1 |= ADC_CR1_SCAN;
+  // Disable Scan Mode
+  ADCx->CR1 &= ~(ADC_CR1_SCAN);
 
   // Disable Continuos Mode
   ADCx->CR2 &= ~(ADC_CR2_CONT);
