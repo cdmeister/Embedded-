@@ -70,6 +70,8 @@ void ADCx_Init(ADC_TypeDef * ADCx){
    *  10: PCLK2 divided by 6
    *  11: PCLK2 divided by 8
   */
+  // If HCLK is 168MHz, then PCLK2 is 84MHZ, ADC clock is 21MHZ since
+  // we are diving the PCLK2 by 4
   ADC123_COMMON->CCR &= ~(ADC_CCR_ADCPRE);  // Clear
   ADC123_COMMON->CCR |= (ADC_CCR_ADCPRE_0); // DIV4
 
@@ -77,7 +79,7 @@ void ADCx_Init(ADC_TypeDef * ADCx){
   // Disable DMA
   ADC123_COMMON->CCR &= ~(ADC_CCR_DMA);
 
-  // Delay (only used in double or triple mode
+  // Delay (only used in double or triple mode, when multiple adc involved)
   ADC123_COMMON->CCR &= ~(ADC_CCR_DELAY);
 
   // Resolution ot 12-bits
@@ -89,16 +91,17 @@ void ADCx_Init(ADC_TypeDef * ADCx){
   // Disable Continuos Mode
   ADCx->CR2 &= ~(ADC_CR2_CONT);
 
-  // External Trigger on rising edge
+  // Trigger Detection disabled
   ADCx->CR2 &= ~(ADC_CR2_EXTEN);
 
-  // Timer 2 Trigger to drive ADC conversion
+  // Timer 2 Trigger to drive ADC conversion(Set to default)
   ADCx->CR2 &= ~ADC_CR2_EXTSEL;
 
-  // Data Alignment
+  // Data Alignment Right
   ADCx->CR2 &= ~(ADC_CR2_ALIGN);
 
-  // Number of Conversions
+  //These bits are written by software to define the total number of
+  //conversions in the regular channel conversion sequence.
   ADCx->SQR1 &= ~(ADC_SQR1_L); // 1 conversion
 
 
