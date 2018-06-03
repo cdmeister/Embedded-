@@ -22,6 +22,9 @@
 uint16_t * temp_30 = (uint16_t *) ((uint32_t)0x1FFF7A2C);
 uint16_t * temp_110 =(uint16_t *) ((uint32_t)0x1FFF7A2E);
 uint16_t * vref_cal =(uint16_t *) 0x1FFF7A2A;
+uint8_t counter =0;
+uint16_t vref_value = 0;
+uint16_t temp_value = 0;
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 /* Private function prototypes -----------------------------------------------*/
@@ -39,9 +42,28 @@ float adc_value_to_temp(const uint16_t value) {
 return conv_value;
 }
 
-uint16_t adc_steps_per_volt(const uint16_t vref_value) {
- return (vref_value * 10) / 12; /* assume 1.2V internal voltage */
+float adc_steps_per_volt(const uint16_t vref_value) {
+ return 3.0*(*vref_cal/(float)vref_value);
 }
+
+void ADC_IRQHandler(void){
+  if((ADC1->SR & ADC_SR_EOC) == ADC_SR_EOC){
+    /* acknowledge interrupt */
+    uint16_t value;
+
+    value = ADC1->DR;
+    if(counter % 2 == 0) {
+      temp_value = value;
+    } else {
+      vref_value = value;
+    }
+    counter++;
+
+  }
+
+}
+
+
 
 void ADCx_Init(ADC_TypeDef * ADCx){
 
@@ -77,13 +99,13 @@ void ADCx_Init(ADC_TypeDef * ADCx){
   // Disable DMA
   ADC123_COMMON->CCR &= ~(ADC_CCR_DMA);
 
-  // Delay (only used in double or triple mode
+  //Configurable delay between conversions in Dual/Triple interleaved mode
   ADC123_COMMON->CCR &= ~(ADC_CCR_DELAY);
 
   // Resolution ot 12-bits
   ADCx->CR1 &= ~(ADC_CR1_RES);
 
-  // Scan Mode
+  // Scan Mode for this example
   ADCx->CR1 |= ADC_CR1_SCAN;
 
   // Disable Continuos Mode
@@ -99,11 +121,42 @@ void ADCx_Init(ADC_TypeDef * ADCx){
   ADCx->CR2 &= ~(ADC_CR2_ALIGN);
 
   // Number of Conversions
-  ADCx->SQR1 &= ~(ADC_SQR1_L); // 1 conversion
+  ADCx->SQR1 &= ~(ADC_SQR1_L);
+  ADCx->SQR1 |= (ADC_SQR1_L_0); // 2 conversion
 
 
-     // Enable Temperature/Vref
+  // Enable Temperature/Vref
   ADC123_COMMON->CCR |=ADC_CCR_TSVREFE;
+
+
+  /* Configure Channel For Temp Sensor */
+  ADCx->SQR3 &= ~(ADC_SQR3_SQ1);
+  // Channel 16 for temp sensor on stm32f4 disc
+  ADCx->SQR3 |= ADC_SQR3_SQ1_4;
+  // Sample Time is 480 cycles
+  ADCx->SMPR1 |= ADC_SMPR1_SMP16;
+
+  /* Configure Channel For Vref*/
+  ADCx->SQR3 &= ~(ADC_SQR3_SQ2);
+  // Channel 17 for vref on stm32f4 disc
+  ADCx->SQR3 |= (ADC_SQR3_SQ2_4|ADC_SQR3_SQ2_0);
+  // Sample Time is 480 cycles
+  ADCx->SMPR1 |= ADC_SMPR1_SMP17;
+
+  // This call enables the end-of-conversion flag after each channel,
+  // which triggers the end-of-conversion interrupt every time this flag is set.
+  ADCx->CR2 |= ADC_CR2_EOCS;
+
+  // Enable Regular channel Interrupt
+  ADCx->CR1 |= ADC_CR1_EOCIE;
+
+
+  // Set ADCx priority to 1
+  NVIC_SetPriority(ADC_IRQn,1);
+
+  // Enable ADCx interrupt
+  NVIC_EnableIRQ(ADC_IRQn);
+
 
   // Turn on the ADC
   ADCx->CR2 |= ADC_CR2_ADON;
@@ -131,44 +184,6 @@ uint16_t adc_read(ADC_TypeDef * ADCx){
 
 
 }
-
-uint16_t adc_read_temp(ADC_TypeDef* ADCx) {
-
-  /* Configure Channel For Temp Sensor */
-  ADCx->SQR3 &= ~(ADC_SQR3_SQ1);
-  ADCx->SQR3 |= ADC_SQR3_SQ1_4; // Channel 16 for temp sensor on stm32f4 disc
-  // Sample Time is 480 cycles
-  ADCx->SMPR1 |= ADC_SMPR1_SMP16;
-
-
-  /* Enable the selected ADC conversion for regular group */
-  ADCx->CR2 |= (uint32_t)ADC_CR2_SWSTART;
-
-  /* wait for end of conversion */
-  while((ADCx->SR & ADC_SR_EOC) == 0);
-
- return (uint16_t) ADCx->DR ;
-}
-
-uint16_t adc_read_vref(ADC_TypeDef* ADCx) {
-  /* Configure Channel For Vref*/
-  ADCx->SQR3 &= ~(ADC_SQR3_SQ1);
-  // Channel 17 for vref on stm32f4 disc
-  ADCx->SQR3 |= (ADC_SQR3_SQ1_4|ADC_SQR3_SQ1_0);
-  // Sample Time is 480 cycles
-  ADCx->SMPR1 |= ADC_SMPR1_SMP17;
-
-
-
-  /* Enable the selected ADC conversion for regular group */
-  ADCx->CR2 |= (uint32_t)ADC_CR2_SWSTART;
-
-  /* wait for end of conversion */
-  while((ADCx->SR & ADC_SR_EOC) == 0);
-
- return (uint16_t) ADCx->DR ;
-}
-
 
 
 /**
@@ -252,6 +267,8 @@ int main(void)
   LCD_init(&rgb_lcd,GPIOD,0,0,1,0,0,0,0,2,3,4,6,4,20,LCD_4BITMODE,LCD_5x8DOTS);
   LCD_setRowOffsets(&rgb_lcd,0x00,0x40,0x14,0x54);
   LCD_clear(&rgb_lcd);
+  LCD_print(&rgb_lcd, "I AM HERE");
+  Delay(5000);
 
   LCD_clear(&rgb_lcd);
   //LCD_home(&rgb_lcd);
@@ -259,15 +276,21 @@ int main(void)
   LCD_noCursor(&rgb_lcd);
   LCD_noBlink(&rgb_lcd);
 
-  Delay(5000);
   while(1){
-    uint16_t adc_value_temp = adc_read_temp(ADC1);
-    float temp = adc_value_to_temp(adc_value_temp);
-    LCD_print(&rgb_lcd, "ADC TEMP: %d", adc_value_temp);
+    /* Enable the selected ADC conversion for regular group */
+    ADC1->CR2 |= (uint32_t)ADC_CR2_SWSTART;
+    while(counter <= 1); // Wait till conversion is done
+    counter = 0;
+    float temp = adc_value_to_temp(temp_value);
+    float vref = adc_steps_per_volt(vref_value);
+    LCD_print(&rgb_lcd, "ADC TEMP: %d", temp_value);
     LCD_setCursor(&rgb_lcd, 0,1);
-    Delay(20);
     LCD_print(&rgb_lcd,"TEMP: %4.2f\xDF%c", temp,'C');
-    Delay(20);
+    LCD_setCursor(&rgb_lcd, 0,2);
+    LCD_print(&rgb_lcd,"VREF ADC: %d", vref_value);
+    LCD_setCursor(&rgb_lcd, 0,3);
+    LCD_print(&rgb_lcd,"Voltage: %4.2fV", vref);
+
     LCD_home(&rgb_lcd);
 
   }
