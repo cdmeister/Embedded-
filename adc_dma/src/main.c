@@ -164,6 +164,42 @@ void ADCx_Init(ADC_TypeDef * ADCx){
 
 }
 
+void DMAx_init(DMA_Stream_TypeDef * DMAx){
+
+  // Enable DMA Clock
+  RCC->AHB1ENR |= RCC_AHB1ENR_DMA2EN;
+
+  // Disable DMA2 so that we can configure it
+  DMAx->CR &= ~(DMA_SxCR_EN);
+
+  // Initialize the Channel Member
+  // ADC on stream 0 channel 0 of DMA2
+  DMAx->CR &= ~(DMA_SxCR_CHSEL);
+
+  // Initialize number of transactions to perform,
+  // transaction can be thought of number of sources you need to transfer
+  // data from. this is decremented after each transfer.
+  DMAx->NDTR &= ~(DMA_SxNDT);
+  DMAx->NDTR |= (DMA_SxNDT_0|DMA_SxNDT_1);
+
+  // Direction, Periphery to Memory
+  DMAx->CR &= ~(DMA_SxCR_DIR);
+
+  // No Fifo mode. Direct mode
+  DMAx->FCR &= ~(DMA_SxFCR_DMDIS);
+
+  // Fifo Threshold, since using direct mode, just set this to default value
+  // Not used in Direct mode
+  DMAx->FCR &= ~(DMA_SxFCR_FTH);
+  DMAx->FCR |= ~(DMA_SxFCR_FTH_0);
+
+  // Memory Burst Mode
+  // In direct mode, these bits are forced to 0x0
+  // by hardware as soon as bit EN= '1'.
+
+
+}
+
 uint16_t adc_read(ADC_TypeDef * ADCx){
 
   /* Configure Channel For requested channel */
@@ -209,6 +245,7 @@ int main(void)
  // Set mode of all pins as digital output
   // 00 = digital input         01 = digital output
   // 10 = alternate function    11 = analog (default)
+  // LCD
   GPIOD->MODER &=~(GPIO_MODER_MODE6|GPIO_MODER_MODE4
                   | GPIO_MODER_MODE3|GPIO_MODER_MODE2
                   | GPIO_MODER_MODE1|GPIO_MODER_MODE0);
@@ -217,6 +254,7 @@ int main(void)
                   | GPIO_MODER_MODE3_0|GPIO_MODER_MODE2_0 //output
                   | GPIO_MODER_MODE1_0|GPIO_MODER_MODE0_0); //output
 
+  // Temp sensor
   GPIOC->MODER &=~(GPIO_MODER_MODE1);
   GPIOC->MODER |= (GPIO_MODER_MODE1_0|GPIO_MODER_MODE1_1);
 
