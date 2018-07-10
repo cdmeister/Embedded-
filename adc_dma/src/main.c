@@ -25,6 +25,8 @@ uint16_t * vref_cal =(uint16_t *) 0x1FFF7A2A;
 uint8_t counter =0;
 uint16_t vref_value = 0;
 uint16_t temp_value = 0;
+uint16_t sample_buffer1;
+uint16_t sample_buffer2;
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 /* Private function prototypes -----------------------------------------------*/
@@ -164,7 +166,7 @@ void ADCx_Init(ADC_TypeDef * ADCx){
 
 }
 
-void DMAx_init(DMA_Stream_TypeDef * DMAx){
+void DMAx_init(DMA_Stream_TypeDef * DMAx, ADC_TypeDef * ADCx){
 
   // Enable DMA Clock
   RCC->AHB1ENR |= RCC_AHB1ENR_DMA2EN;
@@ -196,6 +198,38 @@ void DMAx_init(DMA_Stream_TypeDef * DMAx){
   // Memory Burst Mode
   // In direct mode, these bits are forced to 0x0
   // by hardware as soon as bit EN= '1'.
+  DMAx->CR &= ~(DMA_SxCR_MBURST);
+
+  // Periphery Burst Mode
+  // In direct mode, these bits are forced to 0x0
+  // by hardware as soon as bit EN= '1'.
+  DMAx->CR &= ~(DMA_SxCR_PBURST);
+
+  // Circular Buffer
+  DMAx->CR |= (DMA_SxCR_CIRC);
+
+  // Use Double buffering
+  DMAx->CR |= (DMA_SxCR_DBM);
+
+  // Set the Priority
+  DMAx->CR |= (DMA_SxCR_PL); // Highest
+
+  /* Periphery Source configuration */
+  DMAx->PAR = &ADCx->DR; // Source of the Data to grab
+  DMAx->CR &= ~(DMA_SxCR_PSIZE);
+  DMAx->CR |= (DMA_SxCR_PSIZE_1);
+  // Keep the pointer incremenent constant
+  DMAx->CR &= ~(DMA_SxCR_PINC);
+
+  /* Memory Destination Configuration */
+  DMAx->M0AR = &sample_buffer1;
+  DMAx->M1AR = &sample_buffer2;
+  // In direct mode, MSIZE is forced by hardware to the
+  // same value as PSIZE as soon as bit EN= '1'.
+  DMAx->CR &= ~(DMA_SxCR_MSIZE);
+  // Keep the pointer incremenent constant
+  DMAx->CR &= ~(DMA_SxCR_MINC);
+
 
 
 }
