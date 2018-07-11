@@ -25,8 +25,8 @@ uint16_t * vref_cal =(uint16_t *) 0x1FFF7A2A;
 uint8_t counter =0;
 uint16_t vref_value = 0;
 uint16_t temp_value = 0;
-uint16_t sample_buffer1;
-uint16_t sample_buffer2;
+volatile uint16_t sample_buffer1[3];
+volatile uint16_t sample_buffer2[3];
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 /* Private function prototypes -----------------------------------------------*/
@@ -111,7 +111,7 @@ void ADCx_Init(ADC_TypeDef * ADCx){
   ADCx->CR1 |= ADC_CR1_SCAN;
 
   // Disable Continuos Mode
-  ADCx->CR2 &= ~(ADC_CR2_CONT);
+  ADCx->CR2 |= ADC_CR2_CONT;
 
   // External Trigger on rising edge
   ADCx->CR2 &= ~(ADC_CR2_EXTEN);
@@ -132,9 +132,9 @@ void ADCx_Init(ADC_TypeDef * ADCx){
 
 
   /* Configure Channel For Temp Sensor */
-  ADCx->SQR3 &= ~(ADC_SQR3_SQ1);
+  ADCx->SQR3 &= ~(ADC_SQR3_SQ3);
   // Channel 16 for temp sensor on stm32f4 disc
-  ADCx->SQR3 |= ADC_SQR3_SQ1_4;
+  ADCx->SQR3 |= ADC_SQR3_SQ3_4;
   // Sample Time is 480 cycles
   ADCx->SMPR1 |= ADC_SMPR1_SMP16;
 
@@ -145,12 +145,27 @@ void ADCx_Init(ADC_TypeDef * ADCx){
   // Sample Time is 480 cycles
   ADCx->SMPR1 |= ADC_SMPR1_SMP17;
 
+  /* Configure Channel For requested channel */
+  ADCx->SQR3 &= ~(ADC_SQR3_SQ1);
+  // PC1 is connected to ADC channel 11
+  ADCx->SQR3 |= (ADC_SQR3_SQ1_3|ADC_SQR3_SQ1_1|ADC_SQR3_SQ1_0);
+  // Sample Time is 480 cycles
+  ADCx->SMPR1 |= ADC_SMPR1_SMP11;
+
+
   // This call enables the end-of-conversion flag after each channel,
   // which triggers the end-of-conversion interrupt every time this flag is set.
   ADCx->CR2 |= ADC_CR2_EOCS;
 
   // Enable Regular channel Interrupt
   ADCx->CR1 |= ADC_CR1_EOCIE;
+
+  // For Double-Circular mode for DMA
+  // you can continue to generate requests
+  ADCx->CR2 |= ADC_CR2_DDS;
+
+  // Enable DMA mode for ADC
+  ADCx->CR2 |= ADC_CR2_DMA;
 
 
   // Set ADCx priority to 1
@@ -182,7 +197,7 @@ void DMAx_init(DMA_Stream_TypeDef * DMAx, ADC_TypeDef * ADCx){
   // transaction can be thought of number of sources you need to transfer
   // data from. this is decremented after each transfer.
   DMAx->NDTR &= ~(DMA_SxNDT);
-  DMAx->NDTR |= (DMA_SxNDT_0|DMA_SxNDT_1);
+  DMAx->NDTR |= (DMA_SxNDT_0|DMA_SxNDT_1); //3
 
   // Direction, Periphery to Memory
   DMAx->CR &= ~(DMA_SxCR_DIR);
@@ -222,39 +237,29 @@ void DMAx_init(DMA_Stream_TypeDef * DMAx, ADC_TypeDef * ADCx){
   DMAx->CR &= ~(DMA_SxCR_PINC);
 
   /* Memory Destination Configuration */
-  DMAx->M0AR = &sample_buffer1;
-  DMAx->M1AR = &sample_buffer2;
+  DMAx->M0AR = sample_buffer1;
+  DMAx->M1AR = sample_buffer2;
   // In direct mode, MSIZE is forced by hardware to the
   // same value as PSIZE as soon as bit EN= '1'.
   DMAx->CR &= ~(DMA_SxCR_MSIZE);
-  // Keep the pointer incremenent constant
-  DMAx->CR &= ~(DMA_SxCR_MINC);
+  // Increment the pointer
+  DMAx->CR |= (DMA_SxCR_MINC);
+
+  // Enable the DMA transfer complete interrupt
+  DMAx->CR |= DMA_SxCR_TCIE;
+
+  // Set ADCx priority to 1
+  NVIC_SetPriority(DMA2_Stream0_IRQn,2);
+
+  // Enable ADCx interrupt
+  NVIC_EnableIRQ(DMA2_Stream0_IRQn);
+
+  // Enable the DMA
+  DMAx->CR &= DMA_SxCR_EN;
 
 
 
 }
-
-uint16_t adc_read(ADC_TypeDef * ADCx){
-
-  /* Configure Channel For requested channel */
-  ADCx->SQR3 &= ~(ADC_SQR3_SQ1);
-  ADCx->SQR3 |= (ADC_SQR3_SQ1_3|ADC_SQR3_SQ1_1|ADC_SQR3_SQ1_0); // Channel 16 for temp sensor on stm32f4 disc
-  // Sample Time is 480 cycles
-  ADCx->SMPR1 |= ADC_SMPR1_SMP11;
-
-
-  /* Enable the selected ADC conversion for regular group */
-  ADCx->CR2 |= (uint32_t)ADC_CR2_SWSTART;
-
-  /* wait for end of conversion */
-  while((ADCx->SR & ADC_SR_EOC) == 0);
-
- return (uint16_t) ADCx->DR ;
-
-
-
-}
-
 
 /**
   * @brief   Main program
