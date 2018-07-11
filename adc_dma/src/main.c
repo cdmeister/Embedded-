@@ -19,14 +19,19 @@
 /* Private define ------------------------------------------------------------*/
 #define ADC_TEMPERATURE_V25       760  /* mV */
 #define ADC_TEMPERATURE_AVG_SLOPE 2500 /* mV/C */
+#define PORTD_12 0x00001000 //Green
+#define PORTD_13 0x00002000 //Orange
+#define PORTD_14 0x00004000 //Red
+#define PORTD_15 0x00008000 //Blue
 uint16_t * temp_30 = (uint16_t *) ((uint32_t)0x1FFF7A2C);
 uint16_t * temp_110 =(uint16_t *) ((uint32_t)0x1FFF7A2E);
 uint16_t * vref_cal =(uint16_t *) 0x1FFF7A2A;
 uint8_t counter =0;
 uint16_t vref_value = 0;
 uint16_t temp_value = 0;
+uint16_t thermistor_value = 0;
+volatile uint16_t sample_buffer0[3];
 volatile uint16_t sample_buffer1[3];
-volatile uint16_t sample_buffer2[3];
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 /* Private function prototypes -----------------------------------------------*/
@@ -51,21 +56,40 @@ float adc_steps_per_volt(const uint16_t vref_value) {
 void ADC_IRQHandler(void){
   if((ADC1->SR & ADC_SR_EOC) == ADC_SR_EOC){
     /* acknowledge interrupt */
-    uint16_t value;
-
-    value = ADC1->DR;
-    if(counter % 2 == 0) {
-      temp_value = value;
-    } else {
-      vref_value = value;
-    }
-    counter++;
-
+    GPIOD->ODR ^=PORTD_15;
+    ADC1->SR &= ~(ADC_SR_EOC);
   }
 
 }
 
+void DMA2_Stream0_IRQHandler(void)
+{
+	/* transmission complete interrupt */
+	if (DMA2->LISR & DMA_LISR_TCIF0)
+	{
+    GPIOD->ODR ^=(PORTD_12);
+		DMA2->LIFCR |= (DMA_LIFCR_CTCIF0);  // acknowledge interrupt
 
+    uint16_t *p;
+	  if ((DMA2_Stream0->CR & DMA_SxCR_CT) == 0)  // current target buffer 0 (read buffer 1)
+		  p = (uint16_t*) &sample_buffer0[0];
+	  else                                        // current target buffer 1 (read buffer 0)
+		  p = (uint16_t*) &sample_buffer1[0];
+
+    temp_value = p[0];
+    vref_value = p[1];
+    thermistor_value = p[2];
+    counter = 1;
+	}
+
+  if (DMA2->LISR & DMA_LISR_TEIF0)
+	{
+    GPIOD->ODR =(PORTD_13);
+		DMA2->LIFCR |= (DMA_LIFCR_CTEIF0);  // acknowledge interrupt
+
+	}
+
+}
 
 void ADCx_Init(ADC_TypeDef * ADCx){
 
@@ -96,9 +120,10 @@ void ADCx_Init(ADC_TypeDef * ADCx){
   */
   ADC123_COMMON->CCR &= ~(ADC_CCR_ADCPRE);  // Clear
   ADC123_COMMON->CCR |= (ADC_CCR_ADCPRE_0); // DIV4
+  //ADC123_COMMON->CCR |= (ADC_CCR_ADCPRE); // DIV4
 
 
-  // Disable DMA
+  // Disable DMA for Dual/Triple modes
   ADC123_COMMON->CCR &= ~(ADC_CCR_DMA);
 
   //Configurable delay between conversions in Dual/Triple interleaved mode
@@ -110,8 +135,8 @@ void ADCx_Init(ADC_TypeDef * ADCx){
   // Scan Mode for this example
   ADCx->CR1 |= ADC_CR1_SCAN;
 
-  // Disable Continuos Mode
-  ADCx->CR2 |= ADC_CR2_CONT;
+  // Enable Continuos Mode
+  ADCx->CR2 |= (ADC_CR2_CONT);
 
   // External Trigger on rising edge
   ADCx->CR2 &= ~(ADC_CR2_EXTEN);
@@ -124,17 +149,17 @@ void ADCx_Init(ADC_TypeDef * ADCx){
 
   // Number of Conversions
   ADCx->SQR1 &= ~(ADC_SQR1_L);
-  ADCx->SQR1 |= (ADC_SQR1_L_0); // 2 conversion
-
+  // 3 conversion, this is offset by 1.
+  ADCx->SQR1 |= (ADC_SQR1_L_1);
 
   // Enable Temperature/Vref
   ADC123_COMMON->CCR |=ADC_CCR_TSVREFE;
 
 
   /* Configure Channel For Temp Sensor */
-  ADCx->SQR3 &= ~(ADC_SQR3_SQ3);
+  ADCx->SQR3 &= ~(ADC_SQR3_SQ1);
   // Channel 16 for temp sensor on stm32f4 disc
-  ADCx->SQR3 |= ADC_SQR3_SQ3_4;
+  ADCx->SQR3 |= ADC_SQR3_SQ1_4;
   // Sample Time is 480 cycles
   ADCx->SMPR1 |= ADC_SMPR1_SMP16;
 
@@ -146,16 +171,16 @@ void ADCx_Init(ADC_TypeDef * ADCx){
   ADCx->SMPR1 |= ADC_SMPR1_SMP17;
 
   /* Configure Channel For requested channel */
-  ADCx->SQR3 &= ~(ADC_SQR3_SQ1);
+  ADCx->SQR3 &= ~(ADC_SQR3_SQ3);
   // PC1 is connected to ADC channel 11
-  ADCx->SQR3 |= (ADC_SQR3_SQ1_3|ADC_SQR3_SQ1_1|ADC_SQR3_SQ1_0);
+  ADCx->SQR3 |= (ADC_SQR3_SQ3_3|ADC_SQR3_SQ3_1|ADC_SQR3_SQ3_0);
   // Sample Time is 480 cycles
   ADCx->SMPR1 |= ADC_SMPR1_SMP11;
 
 
   // This call enables the end-of-conversion flag after each channel,
   // which triggers the end-of-conversion interrupt every time this flag is set.
-  ADCx->CR2 |= ADC_CR2_EOCS;
+  ADCx->CR2 &= ~(ADC_CR2_EOCS);
 
   // Enable Regular channel Interrupt
   ADCx->CR1 |= ADC_CR1_EOCIE;
@@ -178,10 +203,14 @@ void ADCx_Init(ADC_TypeDef * ADCx){
   // Turn on the ADC
   ADCx->CR2 |= ADC_CR2_ADON;
 
+  /* Enable the selected ADC conversion for regular group */
+  ADC1->CR2 |= (uint32_t)ADC_CR2_SWSTART;
+
+
 
 }
 
-void DMAx_init(DMA_Stream_TypeDef * DMAx, ADC_TypeDef * ADCx){
+void DMAx_Init(DMA_Stream_TypeDef * DMAx, ADC_TypeDef * ADCx){
 
   // Enable DMA Clock
   RCC->AHB1ENR |= RCC_AHB1ENR_DMA2EN;
@@ -230,32 +259,37 @@ void DMAx_init(DMA_Stream_TypeDef * DMAx, ADC_TypeDef * ADCx){
   DMAx->CR |= (DMA_SxCR_PL); // Highest
 
   /* Periphery Source configuration */
-  DMAx->PAR = &ADCx->DR; // Source of the Data to grab
+  DMAx->PAR = (uint32_t)&ADCx->DR; // Source of the Data to grab
   DMAx->CR &= ~(DMA_SxCR_PSIZE);
-  DMAx->CR |= (DMA_SxCR_PSIZE_1);
+  DMAx->CR |= (DMA_SxCR_PSIZE_0);
   // Keep the pointer incremenent constant
   DMAx->CR &= ~(DMA_SxCR_PINC);
 
   /* Memory Destination Configuration */
-  DMAx->M0AR = sample_buffer1;
-  DMAx->M1AR = sample_buffer2;
+  DMAx->M0AR =(uint32_t) &sample_buffer0;
+  DMAx->M1AR =(uint32_t) &sample_buffer1;
   // In direct mode, MSIZE is forced by hardware to the
   // same value as PSIZE as soon as bit EN= '1'.
   DMAx->CR &= ~(DMA_SxCR_MSIZE);
+  DMAx->CR |= (DMA_SxCR_MSIZE_0);
   // Increment the pointer
   DMAx->CR |= (DMA_SxCR_MINC);
 
+  // Set the DMA as the flow controller
+  DMAx->CR &= ~(DMA_SxCR_PFCTRL);
+
   // Enable the DMA transfer complete interrupt
   DMAx->CR |= DMA_SxCR_TCIE;
+  DMAx->CR |= DMA_SxCR_TEIE;
 
-  // Set ADCx priority to 1
-  NVIC_SetPriority(DMA2_Stream0_IRQn,2);
+  // Set DMAx priority to 1
+  NVIC_SetPriority(DMA2_Stream0_IRQn,1);
 
-  // Enable ADCx interrupt
+  // Enable DMAx interrupt
   NVIC_EnableIRQ(DMA2_Stream0_IRQn);
 
   // Enable the DMA
-  DMAx->CR &= DMA_SxCR_EN;
+  DMAx->CR  |= DMA_SxCR_EN;
 
 
 
@@ -285,36 +319,49 @@ int main(void)
   // 00 = digital input         01 = digital output
   // 10 = alternate function    11 = analog (default)
   // LCD
-  GPIOD->MODER &=~(GPIO_MODER_MODE6|GPIO_MODER_MODE4
-                  | GPIO_MODER_MODE3|GPIO_MODER_MODE2
-                  | GPIO_MODER_MODE1|GPIO_MODER_MODE0);
 
-  GPIOD->MODER |=(GPIO_MODER_MODE6_0|GPIO_MODER_MODE4_0
-                  | GPIO_MODER_MODE3_0|GPIO_MODER_MODE2_0 //output
-                  | GPIO_MODER_MODE1_0|GPIO_MODER_MODE0_0); //output
+  GPIOD->MODER &=~( GPIO_MODER_MODE15 | GPIO_MODER_MODE14
+                  | GPIO_MODER_MODE13 | GPIO_MODER_MODE12
+                  | GPIO_MODER_MODE6  | GPIO_MODER_MODE4
+                  | GPIO_MODER_MODE3  | GPIO_MODER_MODE2
+                  | GPIO_MODER_MODE1  | GPIO_MODER_MODE0);
 
-  // Temp sensor
+  GPIOD->MODER |= ( GPIO_MODER_MODE15_0 |  GPIO_MODER_MODE14_0
+                  | GPIO_MODER_MODE13_0 |  GPIO_MODER_MODE12_0
+                  | GPIO_MODER_MODE6_0  |  GPIO_MODER_MODE4_0
+                  | GPIO_MODER_MODE3_0  |  GPIO_MODER_MODE2_0 //output
+									| GPIO_MODER_MODE1_0 | GPIO_MODER_MODE0_0); //output
+
+	  // Temp sensor
   GPIOC->MODER &=~(GPIO_MODER_MODE1);
   GPIOC->MODER |= (GPIO_MODER_MODE1_0|GPIO_MODER_MODE1_1);
 
   // Set output tupe of all pins as push-pull
   // 0 = push-pull (default)
   // 1 = open-drain
-  GPIOD->OTYPER &= ~( GPIO_OTYPER_OT6 | GPIO_OTYPER_OT4
-                    | GPIO_OTYPER_OT3 | GPIO_OTYPER_OT2
-                    | GPIO_OTYPER_OT1 | GPIO_OTYPER_OT0);
+  GPIOD->OTYPER &= ~( GPIO_OTYPER_OT15 | GPIO_OTYPER_OT14
+                    | GPIO_OTYPER_OT13 | GPIO_OTYPER_OT12
+                    | GPIO_OTYPER_OT6  | GPIO_OTYPER_OT4
+                    | GPIO_OTYPER_OT3  | GPIO_OTYPER_OT2
+                    | GPIO_OTYPER_OT1  | GPIO_OTYPER_OT0);
+
   GPIOC->OTYPER &= ~( GPIO_OTYPER_OT1);
 
   // Set output speed of all pins as high
   // 00 = Low speed           01 = Medium speed
   // 10 = Fast speed          11 = High speed
-  GPIOD->OSPEEDR &=~(GPIO_OSPEEDR_OSPEED6|GPIO_OSPEEDR_OSPEED4
-                    | GPIO_OSPEEDR_OSPEED3|GPIO_OSPEEDR_OSPEED2
-                    | GPIO_OSPEEDR_OSPEED1|GPIO_OSPEEDR_OSPEED0); /* Configure as high speed */
+  GPIOD->OSPEEDR &=~( GPIO_OSPEEDR_OSPEED15 | GPIO_OSPEEDR_OSPEED14
+                    | GPIO_OSPEEDR_OSPEED13 | GPIO_OSPEEDR_OSPEED12
+                    | GPIO_OSPEEDR_OSPEED6  | GPIO_OSPEEDR_OSPEED4
+                    | GPIO_OSPEEDR_OSPEED3  | GPIO_OSPEEDR_OSPEED2
+                    | GPIO_OSPEEDR_OSPEED1  | GPIO_OSPEEDR_OSPEED0); /* Configure as high speed */
 
-  GPIOD->OSPEEDR |=(GPIO_OSPEEDR_OSPEED6|GPIO_OSPEEDR_OSPEED4
-                    | GPIO_OSPEEDR_OSPEED3|GPIO_OSPEEDR_OSPEED2
-                    | GPIO_OSPEEDR_OSPEED1|GPIO_OSPEEDR_OSPEED0); /* Configure as high speed */
+  GPIOD->OSPEEDR |= ( GPIO_OSPEEDR_OSPEED15 | GPIO_OSPEEDR_OSPEED14
+                    | GPIO_OSPEEDR_OSPEED13 | GPIO_OSPEEDR_OSPEED12
+                    | GPIO_OSPEEDR_OSPEED6  | GPIO_OSPEEDR_OSPEED4
+                    | GPIO_OSPEEDR_OSPEED3  | GPIO_OSPEEDR_OSPEED2
+                    | GPIO_OSPEEDR_OSPEED1  | GPIO_OSPEEDR_OSPEED0); /* Configure as high speed */
+
 
   GPIOC->OSPEEDR &=~(GPIO_OSPEEDR_OSPEED1); /* Configure as high speed */
 
@@ -324,9 +371,12 @@ int main(void)
   // Set all pins as no pull-up, no pull-down
   // 00 = no pull-up, no pull-down    01 = pull-up
   // 10 = pull-down,                  11 = reserved
-  GPIOD->PUPDR &= ~(GPIO_PUPDR_PUPD6|GPIO_PUPDR_PUPD4 /*no pul-up, no pull-down*/
-                    |GPIO_PUPDR_PUPD3|GPIO_PUPDR_PUPD2
-                    |GPIO_PUPDR_PUPD1|GPIO_PUPDR_PUPD0);
+
+  GPIOD->PUPDR &= ~(GPIO_PUPDR_PUPD15 | GPIO_PUPDR_PUPD14
+                  | GPIO_PUPDR_PUPD13 | GPIO_PUPDR_PUPD12
+                  | GPIO_PUPDR_PUPD6  | GPIO_PUPDR_PUPD4 /*no pul-up, no pull-down*/
+                  | GPIO_PUPDR_PUPD3  | GPIO_PUPDR_PUPD2
+                  | GPIO_PUPDR_PUPD1  | GPIO_PUPDR_PUPD0);
 
   GPIOC->PUPDR &= ~(GPIO_PUPDR_PUPD1);
 
@@ -337,6 +387,7 @@ int main(void)
   // you can generate an interupt every 1ms so that would be 168 000 ticks per
   // ms and you can fit 168 000 ticks into the LOAD register
   SysTick_Init(SystemCoreClock/1000);
+  DMAx_Init(DMA2_Stream0,ADC1);
 
   ADCx_Init(ADC1);
 
@@ -345,7 +396,7 @@ int main(void)
   LCD_setRowOffsets(&rgb_lcd,0x00,0x40,0x14,0x54);
   LCD_clear(&rgb_lcd);
   LCD_print(&rgb_lcd, "I AM HERE");
-  Delay(5000);
+  Delay(1000);
 
   LCD_clear(&rgb_lcd);
   //LCD_home(&rgb_lcd);
@@ -354,22 +405,33 @@ int main(void)
   LCD_noBlink(&rgb_lcd);
 
   while(1){
-    /* Enable the selected ADC conversion for regular group */
-    ADC1->CR2 |= (uint32_t)ADC_CR2_SWSTART;
-    while(counter <= 1); // Wait till conversion is done
+
+    while(counter == 0); // Wait till conversion is done
     counter = 0;
     float temp = adc_value_to_temp(temp_value);
     float vref = adc_steps_per_volt(vref_value);
-    LCD_print(&rgb_lcd, "ADC TEMP: %d", temp_value);
+    float thermistor_res =10000/((4095.0/thermistor_value)-1.0);
+
+    LCD_print(&rgb_lcd, "ADC: %d %4.2f\xDF%c", temp_value, temp, 'C');
+    Delay(200);
     LCD_setCursor(&rgb_lcd, 0,1);
-    LCD_print(&rgb_lcd,"TEMP: %4.2f\xDF%c", temp,'C');
+    LCD_print(&rgb_lcd,"VREF: %d %4.2fV", vref_value,vref);
+    Delay(200);
     LCD_setCursor(&rgb_lcd, 0,2);
-    LCD_print(&rgb_lcd,"VREF ADC: %d", vref_value);
+    LCD_print(&rgb_lcd,"THERM: %4d %4.2f", thermistor_value,thermistor_res );
+    Delay(200);
     LCD_setCursor(&rgb_lcd, 0,3);
-    LCD_print(&rgb_lcd,"Voltage: %4.2fV", vref);
+    float steinhart;
+    steinhart = thermistor_res / 10000;     // (R/Ro)
+    steinhart = log(steinhart);                  // ln(R/Ro)
+    steinhart /= 3522;                   // 1/B * ln(R/Ro)
+    steinhart += 1.0 / (25 + 273.15); // + (1/To)
+    steinhart = 1.0 / steinhart;                 // Invert
+    steinhart -= 273.15;                         // convert to C
+    LCD_print(&rgb_lcd,"TTEMP: %4.2f", steinhart);
 
-    LCD_home(&rgb_lcd);
-
+  LCD_home(&rgb_lcd);
+    Delay(500);
   }
   return 0;
 }
