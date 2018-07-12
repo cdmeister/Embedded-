@@ -79,7 +79,7 @@ void DMA2_Stream0_IRQHandler(void)
     temp_value = p[0];
     vref_value = p[1];
     thermistor_value = p[2];
-    counter = 1;
+   // counter = 1;
 	}
 
   if (DMA2->LISR & DMA_LISR_TEIF0)
@@ -161,21 +161,24 @@ void ADCx_Init(ADC_TypeDef * ADCx){
   // Channel 16 for temp sensor on stm32f4 disc
   ADCx->SQR3 |= ADC_SQR3_SQ1_4;
   // Sample Time is 480 cycles
-  ADCx->SMPR1 |= ADC_SMPR1_SMP16;
+  ADCx->SMPR1 &= ~(ADC_SMPR1_SMP16);
+  //ADCx->SMPR1 |= ADC_SMPR1_SMP16;
 
   /* Configure Channel For Vref*/
   ADCx->SQR3 &= ~(ADC_SQR3_SQ2);
   // Channel 17 for vref on stm32f4 disc
   ADCx->SQR3 |= (ADC_SQR3_SQ2_4|ADC_SQR3_SQ2_0);
   // Sample Time is 480 cycles
-  ADCx->SMPR1 |= ADC_SMPR1_SMP17;
+  ADCx->SMPR1 &= ~(ADC_SMPR1_SMP17);
+  //ADCx->SMPR1 |= ADC_SMPR1_SMP17;
 
   /* Configure Channel For requested channel */
   ADCx->SQR3 &= ~(ADC_SQR3_SQ3);
   // PC1 is connected to ADC channel 11
   ADCx->SQR3 |= (ADC_SQR3_SQ3_3|ADC_SQR3_SQ3_1|ADC_SQR3_SQ3_0);
   // Sample Time is 480 cycles
-  ADCx->SMPR1 |= ADC_SMPR1_SMP11;
+  ADCx->SMPR1 &= ~(ADC_SMPR1_SMP11);
+  //ADCx->SMPR1 |= ADC_SMPR1_SMP11;
 
 
   // This call enables the end-of-conversion flag after each channel,
@@ -183,7 +186,7 @@ void ADCx_Init(ADC_TypeDef * ADCx){
   ADCx->CR2 &= ~(ADC_CR2_EOCS);
 
   // Enable Regular channel Interrupt
-  ADCx->CR1 |= ADC_CR1_EOCIE;
+  //ADCx->CR1 |= ADC_CR1_EOCIE;
 
   // For Double-Circular mode for DMA
   // you can continue to generate requests
@@ -194,10 +197,10 @@ void ADCx_Init(ADC_TypeDef * ADCx){
 
 
   // Set ADCx priority to 1
-  NVIC_SetPriority(ADC_IRQn,1);
+  //NVIC_SetPriority(ADC_IRQn,1);
 
   // Enable ADCx interrupt
-  NVIC_EnableIRQ(ADC_IRQn);
+  //NVIC_EnableIRQ(ADC_IRQn);
 
 
   // Turn on the ADC
@@ -406,20 +409,20 @@ int main(void)
 
   while(1){
 
-    while(counter == 0); // Wait till conversion is done
-    counter = 0;
+    //while(counter == 0); // Wait till conversion is done
+    //counter = 0;
     float temp = adc_value_to_temp(temp_value);
     float vref = adc_steps_per_volt(vref_value);
     float thermistor_res =10000/((4095.0/thermistor_value)-1.0);
 
     LCD_print(&rgb_lcd, "ADC: %d %4.2f\xDF%c", temp_value, temp, 'C');
-    Delay(200);
+    Delay(20);
     LCD_setCursor(&rgb_lcd, 0,1);
     LCD_print(&rgb_lcd,"VREF: %d %4.2fV", vref_value,vref);
-    Delay(200);
+    Delay(20);
     LCD_setCursor(&rgb_lcd, 0,2);
     LCD_print(&rgb_lcd,"THERM: %4d %4.2f", thermistor_value,thermistor_res );
-    Delay(200);
+    Delay(20);
     LCD_setCursor(&rgb_lcd, 0,3);
     float steinhart;
     steinhart = thermistor_res / 10000;     // (R/Ro)
@@ -431,7 +434,7 @@ int main(void)
     LCD_print(&rgb_lcd,"TTEMP: %4.2f", steinhart);
 
   LCD_home(&rgb_lcd);
-    Delay(500);
+    Delay(50);
   }
   return 0;
 }
