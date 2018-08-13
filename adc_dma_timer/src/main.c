@@ -140,9 +140,11 @@ void ADCx_Init(ADC_TypeDef * ADCx){
 
   // External Trigger on rising edge
   ADCx->CR2 &= ~(ADC_CR2_EXTEN);
+  ADCx->CR2 |= ADC_CR2_EXTEN_0;
 
-  // Timer 2 Trigger to drive ADC conversion
+  // Timer 3 TRGO to drive ADC conversion
   ADCx->CR2 &= ~ADC_CR2_EXTSEL;
+  ADCx->CR2 |= ADC_CR2_EXTSEL_2;
 
   // Data Alignment
   ADCx->CR2 &= ~(ADC_CR2_ALIGN);
@@ -204,9 +206,80 @@ void ADCx_Init(ADC_TypeDef * ADCx){
   ADCx->CR2 |= ADC_CR2_ADON;
 
   /* Enable the selected ADC conversion for regular group */
-  ADC1->CR2 |= (uint32_t)ADC_CR2_SWSTART;
+  //ADC1->CR2 |= (uint32_t)ADC_CR2_SWSTART;
 
 
+
+}
+
+void timer_init(void){
+
+  // Enable Timer 3 clock
+  RCC->APB1ENR |= RCC_APB1ENR_TIM3EN;
+
+  // Disable Timer 3
+  TIM3->CR1 &= ~TIM_CR1_CEN;
+
+  // Counting Direction: 0 = up-counting, 1 = down-counting
+  TIM3->CR1 &=~(TIM_CR1_DIR);
+
+  //Clock Prescaler
+  uint32_t TIM3COUNTER_Frequency = 100000; //Desired Frequency
+  TIM3->PSC = (84000000/TIM3COUNTER_Frequency)-1;
+
+  // Auto Reload: up-counting (0-> ARR), down-counting (ARR -> 0)
+  // In PWM, the ARR controls the period
+  uint32_t PWM_Freq = 10000;
+  TIM3->ARR = (TIM3COUNTER_Frequency/PWM_Freq)-1;
+
+  // ------------------Channel 3 Setup ----------------------------------
+
+  // Disable Input/Output for Channel 3
+  // This must be disable in order to set the channel as
+  // Input or Output
+  TIM3->CCER &= ~TIM_CCER_CC3E;
+
+  // Set Channel 3 as output channel
+  TIM3->CCMR2 &= ~(TIM_CCMR2_CC3S);
+
+  // In PWM, when you fix ARR, CCR3 controls the duty cycle
+  // Set the first value to compare against
+  TIM3->CCR3=(TIM3->ARR+1)/2;
+
+  // Clear Output compare mode bits for channel 3
+  TIM3->CCMR2 &= ~TIM_CCMR2_OC3M;
+
+  // Select PWM Mode 1
+  TIM3->CCMR2 |= (TIM_CCMR2_OC3M_1|TIM_CCMR2_OC3M_2);
+
+  // Select Preload Enable to be disable, allow to update CCR4 register
+  // to be updated at anytime
+  TIM3->CCMR2 &=~(TIM_CCMR2_OC3PE);
+
+  // Select Ouput polarity: 0 = active high, 1 = active low
+  TIM3->CCER &= ~(TIM_CCER_CC3P);
+
+  // Compare/Caputre output Complementary Polarity
+  // Must be kept at reset for channel if configured as output
+  TIM3->CCER &=~(TIM_CCER_CC3NP);
+
+  // Master Mode Selection
+  // Use OC3REF as the trigger output (TRGO)
+  TIM3->CR2 &= ~(TIM_CR2_MMS);
+  TIM3->CR2 |= (TIM_CR2_MMS_2|TIM_CR2_MMS_1);
+
+  // Enable Output for channel 3
+  TIM3->CCER |= TIM_CCER_CC3E;
+
+  // --------------------------------------------------------------
+  //Clear interrupt status only on channel 3 and 4
+  TIM3->SR &= ~(TIM_SR_CC3IF | TIM_SR_CC4IF);
+
+  //Disable interrupts only on channel 3 and 4
+  TIM3->DIER &= ~(TIM_DIER_CC3IE);
+
+  // Enable Timer 3 after all of the initialization
+  TIM3->CR1 |= TIM_CR1_CEN;
 
 }
 
@@ -387,6 +460,7 @@ int main(void)
   // you can generate an interupt every 1ms so that would be 168 000 ticks per
   // ms and you can fit 168 000 ticks into the LOAD register
   SysTick_Init(SystemCoreClock/1000);
+  timer_init();
   DMAx_Init(DMA2_Stream0,ADC1);
 
   ADCx_Init(ADC1);
