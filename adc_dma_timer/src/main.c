@@ -144,7 +144,7 @@ void ADCx_Init(ADC_TypeDef * ADCx){
 
   // Timer 3 TRGO to drive ADC conversion
   ADCx->CR2 &= ~ADC_CR2_EXTSEL;
-  ADCx->CR2 |= ADC_CR2_EXTSEL_2;
+  ADCx->CR2 |= ADC_CR2_EXTSEL_3;
 
   // Data Alignment
   ADCx->CR2 &= ~(ADC_CR2_ALIGN);
