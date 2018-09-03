@@ -395,12 +395,16 @@ int main(void)
 
   GPIOD->MODER &=~( GPIO_MODER_MODE15 | GPIO_MODER_MODE14
                   | GPIO_MODER_MODE13 | GPIO_MODER_MODE12
+                  | GPIO_MODER_MODE10 | GPIO_MODER_MODE9
+                  | GPIO_MODER_MODE8  | GPIO_MODER_MODE7
                   | GPIO_MODER_MODE6  | GPIO_MODER_MODE4
                   | GPIO_MODER_MODE3  | GPIO_MODER_MODE2
                   | GPIO_MODER_MODE1  | GPIO_MODER_MODE0);
 
   GPIOD->MODER |= ( GPIO_MODER_MODE15_0 |  GPIO_MODER_MODE14_0
                   | GPIO_MODER_MODE13_0 |  GPIO_MODER_MODE12_0
+                  | GPIO_MODER_MODE10_0 | GPIO_MODER_MODE9_0
+                  | GPIO_MODER_MODE8_0  | GPIO_MODER_MODE7_0
                   | GPIO_MODER_MODE6_0  |  GPIO_MODER_MODE4_0
                   | GPIO_MODER_MODE3_0  |  GPIO_MODER_MODE2_0 //output
 									| GPIO_MODER_MODE1_0 | GPIO_MODER_MODE0_0); //output
@@ -414,6 +418,8 @@ int main(void)
   // 1 = open-drain
   GPIOD->OTYPER &= ~( GPIO_OTYPER_OT15 | GPIO_OTYPER_OT14
                     | GPIO_OTYPER_OT13 | GPIO_OTYPER_OT12
+                    | GPIO_OTYPER_OT10 | GPIO_OTYPER_OT9
+                    | GPIO_OTYPER_OT8  | GPIO_OTYPER_OT7
                     | GPIO_OTYPER_OT6  | GPIO_OTYPER_OT4
                     | GPIO_OTYPER_OT3  | GPIO_OTYPER_OT2
                     | GPIO_OTYPER_OT1  | GPIO_OTYPER_OT0);
@@ -425,12 +431,16 @@ int main(void)
   // 10 = Fast speed          11 = High speed
   GPIOD->OSPEEDR &=~( GPIO_OSPEEDR_OSPEED15 | GPIO_OSPEEDR_OSPEED14
                     | GPIO_OSPEEDR_OSPEED13 | GPIO_OSPEEDR_OSPEED12
+                    | GPIO_OSPEEDR_OSPEED10 | GPIO_OSPEEDR_OSPEED9
+                    | GPIO_OSPEEDR_OSPEED8  | GPIO_OSPEEDR_OSPEED7
                     | GPIO_OSPEEDR_OSPEED6  | GPIO_OSPEEDR_OSPEED4
                     | GPIO_OSPEEDR_OSPEED3  | GPIO_OSPEEDR_OSPEED2
                     | GPIO_OSPEEDR_OSPEED1  | GPIO_OSPEEDR_OSPEED0); /* Configure as high speed */
 
   GPIOD->OSPEEDR |= ( GPIO_OSPEEDR_OSPEED15 | GPIO_OSPEEDR_OSPEED14
                     | GPIO_OSPEEDR_OSPEED13 | GPIO_OSPEEDR_OSPEED12
+                    | GPIO_OSPEEDR_OSPEED10 | GPIO_OSPEEDR_OSPEED9
+                    | GPIO_OSPEEDR_OSPEED8  | GPIO_OSPEEDR_OSPEED7
                     | GPIO_OSPEEDR_OSPEED6  | GPIO_OSPEEDR_OSPEED4
                     | GPIO_OSPEEDR_OSPEED3  | GPIO_OSPEEDR_OSPEED2
                     | GPIO_OSPEEDR_OSPEED1  | GPIO_OSPEEDR_OSPEED0); /* Configure as high speed */
@@ -447,6 +457,8 @@ int main(void)
 
   GPIOD->PUPDR &= ~(GPIO_PUPDR_PUPD15 | GPIO_PUPDR_PUPD14
                   | GPIO_PUPDR_PUPD13 | GPIO_PUPDR_PUPD12
+                  | GPIO_PUPDR_PUPD10  | GPIO_PUPDR_PUPD9 /*no pul-up, no pull-down*/
+                  | GPIO_PUPDR_PUPD8  | GPIO_PUPDR_PUPD7 /*no pul-up, no pull-down*/
                   | GPIO_PUPDR_PUPD6  | GPIO_PUPDR_PUPD4 /*no pul-up, no pull-down*/
                   | GPIO_PUPDR_PUPD3  | GPIO_PUPDR_PUPD2
                   | GPIO_PUPDR_PUPD1  | GPIO_PUPDR_PUPD0);
@@ -466,7 +478,7 @@ int main(void)
   ADCx_Init(ADC1);
 
   LCD rgb_lcd;
-  LCD_init(&rgb_lcd,GPIOD,0,0,1,0,0,0,0,2,3,4,6,4,20,LCD_4BITMODE,LCD_5x8DOTS);
+  LCD_init(&rgb_lcd,GPIOD,0,0,1,7,8,9,10,2,3,4,6,4,20,LCD_8BITMODE,LCD_5x8DOTS);
   LCD_setRowOffsets(&rgb_lcd,0x00,0x40,0x14,0x54);
   LCD_clear(&rgb_lcd);
   GPIOD->ODR |=PORTD_15;
@@ -488,13 +500,13 @@ int main(void)
     float thermistor_res =10000/((4095.0/thermistor_value)-1.0);
 
     LCD_print(&rgb_lcd, "ADC: %d %4.2f\xDF%c", temp_value, temp, 'C');
-    Delay(200);
+    //Delay(200);
     LCD_setCursor(&rgb_lcd, 0,1);
     LCD_print(&rgb_lcd,"VREF: %d %4.2fV", vref_value,vref);
-    Delay(200);
+    //Delay(200);
     LCD_setCursor(&rgb_lcd, 0,2);
     LCD_print(&rgb_lcd,"THERM: %4d %4.2f", thermistor_value,thermistor_res );
-    Delay(200);
+    //Delay(200);
     LCD_setCursor(&rgb_lcd, 0,3);
     float steinhart;
     steinhart = thermistor_res / 10000;     // (R/Ro)

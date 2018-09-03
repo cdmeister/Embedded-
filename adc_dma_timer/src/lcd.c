@@ -99,8 +99,8 @@ void LCD_init(LCD * LCDx, GPIO_TypeDef * GPIOx,
     write4bits(LCDx,0x2);
 
 
-    write4bits(LCDx, LCDx->_displayFunction|LCD_FUNCTIONSET>>4);
-    write4bits(LCDx, LCDx->_displayFunction|LCD_FUNCTIONSET & 0xF);
+    write4bits(LCDx, (LCDx->_displayFunction|LCD_FUNCTIONSET)>>4);
+    write4bits(LCDx, (LCDx->_displayFunction|LCD_FUNCTIONSET)  & 0xF);
 
     write4bits(LCDx, 0x08 >> 4); // Turn off display
     write4bits(LCDx, 0x08 & 0xF); // Turn off display
@@ -108,8 +108,8 @@ void LCD_init(LCD * LCDx, GPIO_TypeDef * GPIOx,
     write4bits(LCDx, 0x01>> 4); // clear display
     write4bits(LCDx, 0x01 & 0xF); // clear display
 
-    write4bits(LCDx, (LCD_ENTRYMODESET|LCDx->_displayMode>>4)); // set entry mode
-    write4bits(LCDx, (LCD_ENTRYMODESET|LCDx->_displayMode & 0xF)); // set entry mode
+    write4bits(LCDx, (LCD_ENTRYMODESET|LCDx->_displayMode)>>4); // set entry mode
+    write4bits(LCDx, (LCD_ENTRYMODESET|LCDx->_displayMode) & 0xF); // set entry mode
 
     // turn the display on with no cursor or blinking default
     LCDx->_displayControl = 0x0;
@@ -212,7 +212,7 @@ void LCD_blink(LCD * LCDx) {
 
 void write4bits(LCD * LCDx ,uint8_t data){
 
-  if ( data & 0x8 ) LCDx->GPIOx->ODR |= 1 << LCDx->_data_pins[7];
+/*  if ( data & 0x8 ) LCDx->GPIOx->ODR |= 1 << LCDx->_data_pins[7];
   else LCDx->GPIOx->ODR &= ~(1 << LCDx->_data_pins[7]);
 
   if ( data & 0x4 ) LCDx->GPIOx->ODR |= 1 << LCDx->_data_pins[6];
@@ -223,13 +223,28 @@ void write4bits(LCD * LCDx ,uint8_t data){
 
   if ( data & 0x1 ) LCDx->GPIOx->ODR |= 1 << LCDx->_data_pins[4];
   else LCDx->GPIOx->ODR &= ~(1 << LCDx->_data_pins[4]);
+
+*/
+
+  int pin=0;
+  for(;pin<4;pin++){
+    LCDx->GPIOx->BSRR = ((data>>pin)&0x1)? (1 << LCDx->_data_pins[pin+4])  :
+                                          (1 << (LCDx->_data_pins[pin+4]+0x10));
+  }
+
   pulseEnable(LCDx);
 
 }
 
 void write8bits(LCD * LCDx, uint8_t data){
 
-  if ( data & 0x80 ) LCDx->GPIOx->ODR |= 1 << LCDx->_data_pins[7];
+  int pin=0;
+  for(;pin<8;pin++){
+    LCDx->GPIOx->BSRR = ((data>>pin)&0x1)? (1 << LCDx->_data_pins[pin])  :
+                                          (1 << (LCDx->_data_pins[pin]+0x10));
+  }
+
+/*  if ( data & 0x80 ) LCDx->GPIOx->ODR |= 1 << LCDx->_data_pins[7];
   else LCDx->GPIOx->ODR &= ~(1 << LCDx->_data_pins[7]);
 
   if ( data & 0x40 ) LCDx->GPIOx->ODR |= 1 << LCDx->_data_pins[6];
@@ -252,7 +267,7 @@ void write8bits(LCD * LCDx, uint8_t data){
 
   if ( data & 0x01 ) LCDx->GPIOx->ODR |= 1 << LCDx->_data_pins[0];
   else LCDx->GPIOx->ODR &= ~(1 << LCDx->_data_pins[0]);
-
+*/
   pulseEnable(LCDx);
 
   return;
