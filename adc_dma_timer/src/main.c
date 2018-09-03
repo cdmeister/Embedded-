@@ -56,7 +56,7 @@ float adc_steps_per_volt(const uint16_t vref_value) {
 void ADC_IRQHandler(void){
   if((ADC1->SR & ADC_SR_EOC) == ADC_SR_EOC){
     /* acknowledge interrupt */
-    GPIOD->ODR ^=PORTD_15;
+    //GPIOD->ODR ^=PORTD_15;
     ADC1->SR &= ~(ADC_SR_EOC);
   }
 
@@ -196,7 +196,7 @@ void ADCx_Init(ADC_TypeDef * ADCx){
 
 
   // Set ADCx priority to 1
-  NVIC_SetPriority(ADC_IRQn,1);
+  NVIC_SetPriority(ADC_IRQn,0);
 
   // Enable ADCx interrupt
   NVIC_EnableIRQ(ADC_IRQn);
@@ -224,13 +224,13 @@ void timer_init(void){
   TIM3->CR1 &=~(TIM_CR1_DIR);
 
   //Clock Prescaler
-  uint32_t TIM3COUNTER_Frequency = 100000; //Desired Frequency
-  TIM3->PSC = (84000000/TIM3COUNTER_Frequency)-1;
+  //uint32_t TIM3COUNTER_Frequency = 100000; //Desired Frequency
+  TIM3->PSC =0 ;// (84000000/TIM3COUNTER_Frequency)-1;
 
   // Auto Reload: up-counting (0-> ARR), down-counting (ARR -> 0)
   // In PWM, the ARR controls the period
-  uint32_t PWM_Freq = 10000;
-  TIM3->ARR = (TIM3COUNTER_Frequency/PWM_Freq)-1;
+  //uint32_t PWM_Freq = 10000;
+  TIM3->ARR = 1;//(TIM3COUNTER_Frequency/PWM_Freq)-1;
 
   // ------------------Channel 3 Setup ----------------------------------
 
@@ -244,7 +244,7 @@ void timer_init(void){
 
   // In PWM, when you fix ARR, CCR3 controls the duty cycle
   // Set the first value to compare against
-  TIM3->CCR3=(TIM3->ARR+1)/2;
+  TIM3->CCR3=1;//(TIM3->ARR+1)/2;
 
   // Clear Output compare mode bits for channel 3
   TIM3->CCMR2 &= ~TIM_CCMR2_OC3M;
@@ -469,6 +469,7 @@ int main(void)
   LCD_init(&rgb_lcd,GPIOD,0,0,1,0,0,0,0,2,3,4,6,4,20,LCD_4BITMODE,LCD_5x8DOTS);
   LCD_setRowOffsets(&rgb_lcd,0x00,0x40,0x14,0x54);
   LCD_clear(&rgb_lcd);
+  GPIOD->ODR |=PORTD_15;
   LCD_print(&rgb_lcd, "I AM HERE");
   Delay(1000);
 
@@ -505,7 +506,7 @@ int main(void)
     LCD_print(&rgb_lcd,"TTEMP: %4.2f", steinhart);
 
   LCD_home(&rgb_lcd);
-    Delay(500);
+    //Delay(500);
   }
   return 0;
 }

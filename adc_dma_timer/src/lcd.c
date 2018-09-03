@@ -45,37 +45,83 @@ void LCD_init(LCD * LCDx, GPIO_TypeDef * GPIOx,
     LCDx->_displayFunction |= LCD_5x10DOTS;
   }
 
+   // Initialize to default text direction (for romance languages)
+  LCDx->_displayMode = 0x0;
+  LCDx->_displayMode |= LCD_ENTRYLEFT | LCD_ENTRYSHIFTDECREMENT;
+
+
   // Initialization
 
   // Now we pull both RS and R/W low to begin commands
-  //LCDx->GPIOx->BSRR = (1 << (LCDx->_enable_pin+0x10));
-  //LCDx->GPIOx->BSRR = (1 <<(LCDx->_rs_pin+0x10));
-  //digitalWrite(_rs_pin, LOW);
-  //digitalWrite(_enable_pin, LOW);
-  //if (_rw_pin != 255) {
-   // digitalWrite(_rw_pin, LOW);
-  //}
+  LCDx->GPIOx->BSRR = (1 << (LCDx->_enable_pin+0x10));
+  LCDx->GPIOx->BSRR = (1 <<(LCDx->_rs_pin+0x10));
 
-  Delay(50);
 
-  LCD_command(LCDx, 0x30);
-  Delay(5);
+  // 8-bit mode
+  if(LCDx->bitmode == LCD_8BITMODE){
+    // this is according to the hitachi HD44780 datasheet
+    // page 45 figure 23
 
-  LCD_command(LCDx, 0x30);
-  Delay(5);
-
-  LCD_command(LCDx, 0x30);
-  Delay(5);
-
-  if(LCDx->bitmode == LCD_4BITMODE){
-    LCD_command(LCDx, 0x02);
+    write8bits(LCDx,0x30);
     Delay(5);
-  }
-  LCD_command(LCDx, 0x28);
-  Delay(5);
 
-  // clear it off
-  LCD_command(LCDx, 0x01);
+    write8bits(LCDx,0x30);
+    Delay(5);
+
+    write8bits(LCDx,0x30);
+    Delay(5);
+
+    write8bits(LCDx, LCDx->_displayFunction|LCD_FUNCTIONSET);
+    write8bits(LCDx, 0x08); // Turn off display
+    write8bits(LCDx, 0x01); // clear display
+    write8bits(LCDx, LCD_ENTRYMODESET|LCDx->_displayMode); // set entry mode
+
+    // turn the display on with no cursor or blinking default
+    LCDx->_displayControl = 0x0;
+    LCDx->_displayControl |= LCD_DISPLAYON | LCD_CURSORON | LCD_BLINKON;
+    write8bits(LCDx, LCDx->_displayControl | LCD_DISPLAYCONTROL);
+
+  }
+  else{// 4 bit mode
+    // this is according to the hitachi HD44780 datasheet
+    // page 46 figure 24
+
+    write4bits(LCDx,0x3);
+    Delay(5);
+
+    write4bits(LCDx,0x3);
+    Delay(5);
+
+    write4bits(LCDx,0x3);
+    Delay(5);
+
+
+    write4bits(LCDx,0x2);
+
+
+    write4bits(LCDx, LCDx->_displayFunction|LCD_FUNCTIONSET>>4);
+    write4bits(LCDx, LCDx->_displayFunction|LCD_FUNCTIONSET & 0xF);
+
+    write4bits(LCDx, 0x08 >> 4); // Turn off display
+    write4bits(LCDx, 0x08 & 0xF); // Turn off display
+
+    write4bits(LCDx, 0x01>> 4); // clear display
+    write4bits(LCDx, 0x01 & 0xF); // clear display
+
+    write4bits(LCDx, (LCD_ENTRYMODESET|LCDx->_displayMode>>4)); // set entry mode
+    write4bits(LCDx, (LCD_ENTRYMODESET|LCDx->_displayMode & 0xF)); // set entry mode
+
+    // turn the display on with no cursor or blinking default
+    LCDx->_displayControl = 0x0;
+    LCDx->_displayControl |= LCD_DISPLAYON | LCD_CURSORON | LCD_BLINKON;
+    write4bits(LCDx, (LCDx->_displayControl | LCD_DISPLAYCONTROL)>>4);
+    write4bits(LCDx, (LCDx->_displayControl | LCD_DISPLAYCONTROL)&0xF);
+  }
+
+
+
+
+/* // clear it off LCD_command(LCDx, 0x01);
   Delay(5);
   // Initialize to default text direction (for romance languages)
   LCDx->_displayMode = 0x0;
@@ -89,60 +135,10 @@ void LCD_init(LCD * LCDx, GPIO_TypeDef * GPIOx,
   LCDx->_displayControl |= LCD_DISPLAYON | LCD_CURSORON | LCD_BLINKON;
   LCD_command(LCDx,0x0F);
   Delay(5);
-
-
-
-/*
-  //put the LCD into 4 bit or 8 bit mode
-  if (! (LCDx->_displayFunction & LCD_8BITMODE)) {
-    // this is according to the hitachi HD44780 datasheet
-    // figure 24, pg 46
-
-    // we start in 8bit mode, try to set 4 bit mode
-    write4bits(LCDx, 0x03);
-    Delay(5); // wait min 4.1ms
-
-    // second try
-    write4bits(LCDx, 0x03);
-    Delay(5); // wait min 4.1ms
-
-    // third go!
-    write4bits(LCDx, 0x03);
-    Delay(1);
-
-    // finally, set to 4-bit interface
-    write4bits(LCDx, 0x02);
-  } else {
-    // this is according to the hitachi HD44780 datasheet
-    // page 45 figure 23
-
-    // Send function set command sequence
-    LCD_command(LCDx, LCD_FUNCTIONSET | LCDx->_displayFunction);
-    Delay(5);  // wait more than 4.1ms
-
-    // second try
-    LCD_command(LCDx, LCD_FUNCTIONSET | LCDx->_displayFunction);
-    Delay(1);
-
-    // third go
-    LCD_command(LCDx, LCD_FUNCTIONSET | LCDx->_displayFunction);
-  }
-
-  // finally, set # lines, font size, etc.
-  LCD_command(LCDx, LCD_FUNCTIONSET | LCDx->_displayFunction);
-
-  // turn the display on with no cursor or blinking default
-  LCDx->_displayControl = LCD_DISPLAYON | LCD_CURSOROFF | LCD_BLINKOFF;
-  LCD_display(LCDx);
-
-  // clear it off
-  LCD_clear(LCDx);
-
-  // Initialize to default text direction (for romance languages)
-  LCDx->_displayMode = LCD_ENTRYLEFT | LCD_ENTRYSHIFTDECREMENT;
-  // set the entry mode
-  LCD_command(LCDx, LCD_ENTRYMODESET | LCDx->_displayMode);
 */
+
+
+
 
 }
 
