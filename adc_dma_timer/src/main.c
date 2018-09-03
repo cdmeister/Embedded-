@@ -13,7 +13,7 @@
 #include "main.h"
 #include "systick.h"
 #include "lcd.h"
-
+#include "usart.h"
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
@@ -465,6 +465,41 @@ int main(void)
 
   GPIOC->PUPDR &= ~(GPIO_PUPDR_PUPD1);
 
+    // Enable GPIO clock and configure the Tx pin and the Rx pin as
+  // Alternating functions, High Speed, Push-pull, Pull-up
+
+  // GPIO Initialization for USART 2
+  // PA2 (Tx) PA3 (Rx)
+  RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
+
+  // Set mode of all pins as digital output
+  // 00 = digital input       01 = digital output
+  // 10 = alternate function  11 = analog (default)
+  GPIOA->MODER &= ~(0xF<<4); /* Clear mode bits */
+  GPIOA->MODER |= 0xA<<4;/* PA2 and PA3  are on GPIOA */
+
+  // Alternate Function 7 = USART 2
+  GPIOA->AFR[0] = (0x77 << 8); //Set alternate function for Pins 2 and 3
+
+  // Set output type of all pins as push-pull
+  // 0 = push-pull (default)
+  // 1 = open-drain
+  GPIOA->OTYPER &= ~(0x3<<2); /*Configure as output open-drain */
+
+  // Set output speed of all pins as high
+  // 00 = Low speed           01 = Medium speed
+  // 10 = Fast speed          11 = High speed
+  GPIOA->OSPEEDR &=~(0xF<<4); /* Configure as high speed */
+  GPIOA->OSPEEDR |= (0xF<<4);
+
+  // Set all pins as no pull-up, no pull-down
+  // 00 = no pull-up, no pull-down    01 = pull-up
+  // 10 = pull-down,                  11 = reserved
+  GPIOA->PUPDR &= ~(0xF<<4); /*no pul-up, no pull-down*/
+GPIOA->PUPDR |= (0x5<<4); /*no pul-up, no pull-down*/
+
+
+
     // Generate and interrupt every 1ms
   // http://www.electronics-homemade.com/STM32F4-LED-Toggle-Systick.html
   // If the clock is at 168MHz, then that is 168 000 000 ticks per second
@@ -476,6 +511,7 @@ int main(void)
   DMAx_Init(DMA2_Stream0,ADC1);
 
   ADCx_Init(ADC1);
+  USARTx_Init(USART2);
 
   LCD rgb_lcd;
   LCD_init(&rgb_lcd,GPIOD,0,0,1,7,8,9,10,2,3,4,6,4,20,LCD_8BITMODE,LCD_5x8DOTS);
@@ -516,8 +552,8 @@ int main(void)
     steinhart = 1.0 / steinhart;                 // Invert
     steinhart -= 273.15;                         // convert to C
     LCD_print(&rgb_lcd,"TTEMP: %4.2f", steinhart);
-
-  LCD_home(&rgb_lcd);
+    USART_print(USART2,"TTEMP: %4.2f\r\n", steinhart);
+    LCD_home(&rgb_lcd);
     //Delay(500);
   }
   return 0;
