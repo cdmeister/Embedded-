@@ -3,6 +3,7 @@
 // SysTick System Handler
 void SysTick_Handler (void){ // SysTick interrupt service routine
   // TimeDelay is a global variable delcared as volatile
+  milliseconds++;
   if (TimeDelay >0)         // Prevent it from being negative
     TimeDelay--;            // TimeDelay is global volatile variable
 }
@@ -11,6 +12,10 @@ void Delay(uint32_t nTime){
   // nTime: specifies the delay time Length
   TimeDelay = nTime;        // Time Delay must be declared as volatile
   while(TimeDelay != 0);    // Busy wait
+}
+
+uint32_t millis() {
+  return milliseconds;
 }
 
 // Input: ticks = muber of ticks between two interrupts
