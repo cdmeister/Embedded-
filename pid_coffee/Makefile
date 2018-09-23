@@ -42,7 +42,8 @@ src/systick.c \
 src/lcd.c \
 src/clock.c \
 src/flash.c \
-src/usart.c
+src/usart.c \
+src/pid.c
 
 # ASM sources
 ASM_SOURCES =  \

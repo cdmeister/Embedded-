@@ -27,7 +27,7 @@ uint16_t * temp_30 = (uint16_t *) ((uint32_t)0x1FFF7A2C);
 uint16_t * temp_110 =(uint16_t *) ((uint32_t)0x1FFF7A2E);
 uint16_t * vref_cal =(uint16_t *) 0x1FFF7A2A;
 uint8_t counter =0;
-uint8_t counter2 =0;
+uint32_t counter2 =0;
 uint16_t vref_value = 0;
 uint16_t temp_value = 0;
 uint16_t thermistor_value = 0;
@@ -50,244 +50,27 @@ float adc_value_to_temp(const uint16_t value) {
 return conv_value;
 }
 
-long map(long x, long in_min, long in_max, long out_min, long out_max)
-{
-  // if input is smaller/bigger than expected return the min/max out ranges value
-  if (x < in_min)
-    return out_min;
-  else if (x > in_max)
-    return out_max;
-
-  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
-  // map the input to the output range.
-  // round up if mapping bigger ranges to smaller ranges
-  //else  if ((in_max - in_min) > (out_max - out_min))
-   // return (x - in_min) * (out_max - out_min + 1) / (in_max - in_min + 1) + out_min;
-  // round down if mapping smaller ranges to bigger ranges
-  //else
-   // return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
-}
-
 float adc_steps_per_volt(const uint16_t vref_value) {
  return 3.0*(*vref_cal/(float)vref_value);
 }
 
 void ADC_IRQHandler(void){
-if((ADC1->SR & ADC_SR_EOC) == ADC_SR_EOC){
+  if((ADC1->SR & ADC_SR_EOC) == ADC_SR_EOC){
   	/* acknowledge interrupt */
-    GPIOD->ODR ^=PORTD_13;
+    if (counter2==2000){
+      GPIOD->ODR ^=PORTD_13;
+      counter2=0;
+    }
+    else{
+      counter2++;
+    }
 		uint16_t value;
 
 		temp_value = ADC1->DR;
 		counter=0;
   	//ADC1->SR &= ~(ADC_SR_EOC);
-	}
 
-}
-void TIM4_IRQHandler(void){
-
-  // Check whether an overflow event has taken place
-  if((TIM4->SR & TIM_SR_CC2IF) != 0){
-    TIM4->SR &= ~TIM_SR_CC2IF;
   }
-  /*if((TIM4->SR & TIM_SR_CC3IF) != 0){
-    TIM4->SR &= ~TIM_SR_CC3IF;
-  }
-  if((TIM4->SR & TIM_SR_CC4IF) != 0){
-    TIM4->SR &= ~TIM_SR_CC4IF;
-  }*/
-  // Check whether an overflow event has taken place
-  /*if((TIM4->SR & TIM_SR_UIF) != 0){
-    TIM4->SR &= ~TIM_SR_UIF;
-  }*/
-
-}
-void timer4_init(void){
-
-  // Enable Timer 4 clock
-  RCC->APB1ENR |= RCC_APB1ENR_TIM4EN;
-
-  // Disable Timer 4
-  TIM4->CR1 &= ~TIM_CR1_CEN;
-
-  // Counting Direction: 0 = up-counting, 1 = down-counting
-  TIM4->CR1 &=~(TIM_CR1_DIR);
-
-  // Auto-reload preload enable
-  TIM4->CR1 &=~(TIM_CR1_ARPE);
-  TIM4->CR1 |=(TIM_CR1_ARPE);
-
-  //Clock Prescaler
-  uint32_t TIM4COUNTER_Frequency = 100000; //Desired Frequency
-  TIM4->PSC = (84000000/TIM4COUNTER_Frequency)-1;
-  //TIM4->PSC = 62499;
-
-  //Auto Reload: up-counting (0-> ARR), down-counting (ARR -> 0)
-  TIM4->ARR = .01 * 100000-1;
-  //TIM4->ARR = 1343;
-
-  // ------------------Channel 2 Setup ----------------------------------
-
-  // Disable Input/Output for Channel 3
-  // This must be disable in order to set the channel as
-  // Input or Output
-  //TIM4->CCER &= ~TIM_CCER_CC2E;
-
-  // Set Channel 4 as output channel
-  //TIM4->CCMR1 &= ~(TIM_CCMR1_CC2S);
-
-  // Set the first value to compare against
-  // 50% duty cycle
-  //TIM4->CCR3=.5*TIM4->ARR;
-  //TIM4->CCR2 = TIM4->ARR;
-
-  // Clear Output compare mode bits for channel 3
-  //TIM4->CCMR1 &= ~TIM_CCMR1_OC2M;
-
-  // Select Pulse Width Modulation Mode 1
-  //TIM4->CCMR1 |= (TIM_CCMR1_OC2M_1);
-
-  // Select Preload Enable to be enable for PWM, allow to update CCR4 register
-  // to be updated at overflow/underflow events
-  //TIM4->CCMR1 &=~(TIM_CCMR1_OC2PE);
-
-  // Select Ouput polarity: 0 = active high, 1 = active low
-  //TIM4->CCER &= ~(TIM_CCER_CC2P);
-
-  // Compare/Caputre output Complementary Polarity
-  // Must be kept at reset for channel if configured as output
-  //TIM4->CCER &=~(TIM_CCER_CC2NP);
-
-  // Enable Output for channel 4
-  //TIM4->CCER |= TIM_CCER_CC2E;
-
-
-  // ------------------Channel 3 Setup ----------------------------------
-
-  // Disable Input/Output for Channel 3
-  // This must be disable in order to set the channel as
-  // Input or Output
-  TIM4->CCER &= ~TIM_CCER_CC3E;
-
-  // Set Channel 4 as output channel
-  TIM4->CCMR2 &= ~(TIM_CCMR2_CC3S);
-
-  // Set the first value to compare against
-  // 50% duty cycle
-  //TIM4->CCR3=.5*TIM4->ARR;
-  TIM4->CCR3 = 0;
-
-  // Clear Output compare mode bits for channel 3
-  TIM4->CCMR2 &= ~TIM_CCMR2_OC3M;
-
-  // Select Pulse Width Modulation Mode 1
-  TIM4->CCMR2 |= (TIM_CCMR2_OC3M_2|TIM_CCMR2_OC3M_1);
-
-  // Select Preload Enable to be enable for PWM, allow to update CCR4 register
-  // to be updated at overflow/underflow events
-  TIM4->CCMR2 &=~(TIM_CCMR2_OC3PE);
-  TIM4->CCMR2 |= (TIM_CCMR2_OC3PE);
-
-  // Select Ouput polarity: 0 = active high, 1 = active low
-  TIM4->CCER &= ~(TIM_CCER_CC3P);
-
-  // Compare/Caputre output Complementary Polarity
-  // Must be kept at reset for channel if configured as output
-  TIM4->CCER &=~(TIM_CCER_CC3NP);
-
-  // Enable Output for channel 4
-  TIM4->CCER |= TIM_CCER_CC3E;
-
-  // ------------------Channel 4 Setup ----------------------------------
-
-  // Disable Input/Output for Channel 4
-  // This must be disable in order to set the channel as
-  // Input or Output
-  TIM4->CCER &= ~TIM_CCER_CC4E;
-
-  // Set Channel 4 as output channel
-  TIM4->CCMR2 &= ~(TIM_CCMR2_CC4S);
-
-  // Set the first value to compare against
-  TIM4->CCR4=0;
-
-  // Clear Output compare mode bits for channel 1
-  TIM4->CCMR2 &= ~TIM_CCMR2_OC4M;
-
-  // Select Pulse Width Modulation Mode 1
-  TIM4->CCMR2 |= (TIM_CCMR2_OC4M_2|TIM_CCMR2_OC4M_1);
-
-  // Select Preload Enable to be enable for PWM, allow to update CCR4 register
-  // to be updated at overflow/underflow events
-  TIM4->CCMR2 &=~(TIM_CCMR2_OC4PE);
-  TIM4->CCMR2 |= (TIM_CCMR2_OC4PE);
-
-  // Select Ouput polarity: 0 = active high, 1 = active low
-  TIM4->CCER &= ~(TIM_CCER_CC4P);
-
-  // Compare/Caputre output Complementary Polarity
-  // Must be kept at reset for channel if configured as output
-  TIM4->CCER &=~(TIM_CCER_CC4NP);
-
-  // Enable Output for channel 4
-  TIM4->CCER |= TIM_CCER_CC4E;
-
-  // --------------------------------------------------------------
-
-  // Enable Update Generation
-  TIM4->EGR &= ~TIM_EGR_UG;
-  TIM4->EGR |= TIM_EGR_UG;
-
-  // Center Align Mode Selection
-  TIM4->CR1 &=~(TIM_CR1_CMS);
-
-  //Clear interrupt status only on channel 3 and 4
-
-  TIM4->SR &= ~(TIM_SR_CC2IF);
-
-  //Enable interrupts only on channel 3 and 4
-
-  //TIM4->DIER |= (TIM_DIER_CC2IE);
-
-
-  // Set TIM4 priority to 1
-  //NVIC_SetPriority(TIM4_IRQn,3);
-
-  // Enable TIM4 interrupt
-  //NVIC_EnableIRQ(TIM4_IRQn);
-
-
-  // Enable Timer 4 after all of the initialization
-  TIM4->CR1 |= TIM_CR1_CEN;
-
-}
-void DMA2_Stream0_IRQHandler(void)
-{
-	/* transmission complete interrupt */
-	if (DMA2->LISR & DMA_LISR_TCIF0)
-	{
-    //GPIOD->ODR ^=(PORTD_12);
-		DMA2->LIFCR |= (DMA_LIFCR_CTCIF0);  // acknowledge interrupt
-
-    uint16_t *p;
-	  if ((DMA2_Stream0->CR & DMA_SxCR_CT) == 0)  // current target buffer 0 (read buffer 1)
-		  p = (uint16_t*) &sample_buffer0[0];
-	  else                                        // current target buffer 1 (read buffer 0)
-		  p = (uint16_t*) &sample_buffer1[0];
-
-    //temp_value = p[0];
-    //vref_value = p[1];
-    thermistor_value = p[0];
-    counter = 1;
-	}
-
-  if (DMA2->LISR & DMA_LISR_TEIF0)
-	{
-    //GPIOD->ODR ^=(PORTD_13);
-		DMA2->LIFCR |= (DMA_LIFCR_CTEIF0);  // acknowledge interrupt
-
-	}
-
 }
 
 void ADCx_Init(ADC_TypeDef * ADCx){
@@ -317,124 +100,8 @@ void ADCx_Init(ADC_TypeDef * ADCx){
    *  10: PCLK2 divided by 6
    *  11: PCLK2 divided by 8
   */
-// ADC123_COMMON->CCR &= ~(ADC_CCR_ADCPRE);  // Clear
-// ADC123_COMMON->CCR |= (ADC_CCR_ADCPRE_0); // DIV2
-// //ADC123_COMMON->CCR |= (ADC_CCR_ADCPRE); // DIV4
-//
-//
-// // Disable DMA for Dual/Triple modes
-// ADC123_COMMON->CCR &= ~(ADC_CCR_DMA);
-//
-// //Configurable delay between conversions in Dual/Triple interleaved mode
-// ADC123_COMMON->CCR &= ~(ADC_CCR_DELAY);
-//
-// // Resolution ot 12-bits
-// ADCx->CR1 &= ~(ADC_CR1_RES);
-//
-// // Scan Mode for this example
-// ADCx->CR1 &= ~(ADC_CR1_SCAN);
-//
-// // Disable Continuos Mode
-// ADCx->CR2 &= ~(ADC_CR2_CONT);
-//
-// // External Trigger on rising edge
-// ADCx->CR2 &= ~(ADC_CR2_EXTEN);
-// ADCx->CR2 |= ADC_CR2_EXTEN_0;
-//
-// // Timer 3 TRGO to drive ADC conversion
-// ADCx->CR2 &= ~ADC_CR2_EXTSEL;
-// ADCx->CR2 |= ADC_CR2_EXTSEL_3;
-//
-// // Data Alignment
-// ADCx->CR2 &= ~(ADC_CR2_ALIGN);
-//
-// // Number of Conversions
-// ADCx->SQR1 &= ~(ADC_SQR1_L);
-// // 3 conversion, this is offset by 1.
-// //ADCx->SQR1 |= (ADC_SQR1_L_1);
-//
-// // Enable Temperature/Vref
-// ADC123_COMMON->CCR |=ADC_CCR_TSVREFE;
-//
-//
-// /* Configure Channel For Temp Sensor */
-// ADCx->SQR3 &= ~(ADC_SQR3_SQ1);
-// // Channel 16 for temp sensor on stm32f4 disc
-// ADCx->SQR3 |= ADC_SQR3_SQ1_4;
-// // Sample Time is 480 cycles
-// //ADCx->SMPR1 |= ADC_SMPR1_SMP16;
-// ADCx->SMPR1 &= ~(ADC_SMPR1_SMP16);
-// /* Configure Channel For Vref*/
-// //ADCx->SQR3 &= ~(ADC_SQR3_SQ2);
-// // Channel 17 for vref on stm32f4 disc
-// //ADCx->SQR3 |= (ADC_SQR3_SQ2_4|ADC_SQR3_SQ2_0);
-// // Sample Time is 480 cycles
-// //ADCx->SMPR1 |= ADC_SMPR1_SMP17;
-//
-// /* Configure Channel For requested channel */
-// //ADCx->SQR3 &= ~(ADC_SQR3_SQ3);
-// // PC1 is connected to ADC channel 11
-// //ADCx->SQR3 |= (ADC_SQR3_SQ3_3|ADC_SQR3_SQ3_1|ADC_SQR3_SQ3_0);
-// // Sample Time is 480 cycles
-// //ADCx->SMPR1 |= ADC_SMPR1_SMP11;
-//
-//
-// // This call enables the end-of-conversion flag after each channel,
-// // which triggers the end-of-conversion interrupt every time this flag is set.
-// //ADCx->CR2 &= ~(ADC_CR2_EOCS);
-// ADCx->CR2 |= (ADC_CR2_EOCS);
-//
-// // Enable Regular channel Interrupt
-// ADCx->CR1 |= ADC_CR1_EOCIE;
-//
-// // For Double-Circular mode for DMA
-// // you can continue to generate requests
-// //ADCx->CR2 |= ADC_CR2_DDS;
-//
-// // Enable DMA mode for ADC
-// //ADCx->CR2 |= ADC_CR2_DMA;
-//
-//
-// // Set ADCx priority to 1
-// NVIC_SetPriority(ADC_IRQn,1);
-//
-// // Enable ADCx interrupt
-// NVIC_EnableIRQ(ADC_IRQn);
-//
-//
-// // Turn on the ADC
-// ADCx->CR2 |= ADC_CR2_ADON;
-//
-// /* Enable the selected ADC conversion for regular group */
-// //ADC1->CR2 |= (uint32_t)ADC_CR2_SWSTART;
-
-  // Enable ADCx
-  if(ADCx == ADC1) RCC->APB2ENR |= RCC_APB2ENR_ADC1EN;
-  else if(ADCx == ADC2) RCC->APB2ENR |= RCC_APB2ENR_ADC2EN;
-  else RCC->APB2ENR |= RCC_APB2ENR_ADC3EN;
-
-
-  /*
-   * ADC Mode Selection
-   *
-   * Note:
-   *  00000 : Independent Mode, ADC operate independently
-   */
-  ADC123_COMMON->CCR &= ~(ADC_CCR_MULTI);
-
-
-  /*
-   * Set and cleared by software to select the frequency of the clock
-   *  to the ADC. The clock is common for all the ADCs.
-   *
-   * Note:
-   *  00: PCLK2 divided by 2
-   *  01: PCLK2 divided by 4
-   *  10: PCLK2 divided by 6
-   *  11: PCLK2 divided by 8
-  */
   ADC123_COMMON->CCR &= ~(ADC_CCR_ADCPRE);  // Clear
-  ADC123_COMMON->CCR |= (ADC_CCR_ADCPRE_0); // DIV4
+  ADC123_COMMON->CCR |= (ADC_CCR_ADCPRE_0); // DIV2
 
 
   // Disable DMA
@@ -482,13 +149,6 @@ void ADCx_Init(ADC_TypeDef * ADCx){
 	ADCx->SMPR1 &= ~(ADC_SMPR1_SMP16);
   //ADCx->SMPR1 |= ADC_SMPR1_SMP16;
 
-  /* Configure Channel For Vref*/
-  //ADCx->SQR3 &= ~(ADC_SQR3_SQ2);
-  // Channel 17 for vref on stm32f4 disc
-  //ADCx->SQR3 |= (ADC_SQR3_SQ2_4|ADC_SQR3_SQ2_0);
-  // Sample Time is 480 cycles
-  //ADCx->SMPR1 |= ADC_SMPR1_SMP17;
-
   // This call enables the end-of-conversion flag after each channel,
   // which triggers the end-of-conversion interrupt every time this flag is set.
   ADCx->CR2 |= ADC_CR2_EOCS;
@@ -505,7 +165,7 @@ void ADCx_Init(ADC_TypeDef * ADCx){
 
 
   // Turn on the ADC
-ADCx->CR2 |= ADC_CR2_ADON;
+  ADCx->CR2 |= ADC_CR2_ADON;
 
 }
 
@@ -532,144 +192,17 @@ void timer_init(void){
   //uint32_t PWM_Freq = 10000;
   TIM3->ARR = 49;//(TIM3COUNTER_Frequency/PWM_Freq)-1;
 
-  // ------------------Channel 3 Setup ----------------------------------
-
-  // Disable Input/Output for Channel 3
-  // This must be disable in order to set the channel as
-  // Input or Output
-  TIM3->CCER &= ~TIM_CCER_CC3E;
-
-  // Set Channel 3 as output channel
-//  TIM3->CCMR2 &= ~(TIM_CCMR2_CC3S);
-
-  // In PWM, when you fix ARR, CCR3 controls the duty cycle
-  // Set the first value to compare against
- // TIM3->CCR3=1;//(TIM3->ARR+1)/2;
-
-  // Clear Output compare mode bits for channel 3
- // TIM3->CCMR2 &= ~TIM_CCMR2_OC3M;
-
-  // Select PWM Mode 1
-  //TIM3->CCMR2 |= (TIM_CCMR2_OC3M_1|TIM_CCMR2_OC3M_2);
- // TIM3->CCMR2 |= (TIM_CCMR2_OC3M_1|TIM_CCMR2_OC3M_2);
-
-  // Select Preload Enable to be disable, allow to update CCR4 register
-  // to be updated at anytime
-//  TIM3->CCMR2 &=~(TIM_CCMR2_OC3PE);
-
-  // Select Ouput polarity: 0 = active high, 1 = active low
-//  TIM3->CCER &= ~(TIM_CCER_CC3P);
-
-  // Compare/Caputre output Complementary Polarity
-  // Must be kept at reset for channel if configured as output
-//  TIM3->CCER &=~(TIM_CCER_CC3NP);
-
   // Master Mode Selection
   // Use OC3REF as the trigger output (TRGO)
   TIM3->CR2 &= ~(TIM_CR2_MMS);
   TIM3->CR2 |= (TIM_CR2_MMS_1);
   //TIM3->CR2 |= (TIM_CR2_MMS_2|TIM_CR2_MMS_1);
 
-  // Enable Output for channel 3
-  //TIM3->CCER |= TIM_CCER_CC3E;
-
-  // --------------------------------------------------------------
-  //Clear interrupt status only on channel 3 and 4
-  TIM3->SR &= ~(TIM_SR_CC3IF | TIM_SR_CC4IF);
-
-  //Disable interrupts only on channel 3 and 4
-  TIM3->DIER &= ~(TIM_DIER_CC3IE);
-
   // Enable Timer 3 after all of the initialization
   TIM3->CR1 |= TIM_CR1_CEN;
 
 }
 
-void DMAx_Init(DMA_Stream_TypeDef * DMAx, ADC_TypeDef * ADCx){
-
-  // Enable DMA Clock
-  RCC->AHB1ENR |= RCC_AHB1ENR_DMA2EN;
-
-  // Disable DMA2 so that we can configure it
-  DMAx->CR &= ~(DMA_SxCR_EN);
-
-  // Initialize the Channel Member
-  // ADC on stream 0 channel 0 of DMA2
-  DMAx->CR &= ~(DMA_SxCR_CHSEL);
-
-  // Initialize number of transactions to perform,
-  // transaction can be thought of number of sources you need to transfer
-  // data from. this is decremented after each transfer.
-  DMAx->NDTR &= ~(DMA_SxNDT);
-  DMAx->NDTR |= (DMA_SxNDT_0); //3
-  //DMAx->NDTR |= (DMA_SxNDT_0|DMA_SxNDT_1); //3
-
-  // Direction, Periphery to Memory
-  DMAx->CR &= ~(DMA_SxCR_DIR);
-
-  // No Fifo mode. Direct mode
-  DMAx->FCR &= ~(DMA_SxFCR_DMDIS);
-
-  // Fifo Threshold, since using direct mode, just set this to default value
-  // Not used in Direct mode
-  DMAx->FCR &= ~(DMA_SxFCR_FTH);
-  DMAx->FCR |= ~(DMA_SxFCR_FTH_0);
-
-  // Memory Burst Mode
-  // In direct mode, these bits are forced to 0x0
-  // by hardware as soon as bit EN= '1'.
-  DMAx->CR &= ~(DMA_SxCR_MBURST);
-
-  // Periphery Burst Mode
-  // In direct mode, these bits are forced to 0x0
-  // by hardware as soon as bit EN= '1'.
-  DMAx->CR &= ~(DMA_SxCR_PBURST);
-
-  // Circular Buffer
-  DMAx->CR |= (DMA_SxCR_CIRC);
-
-  // Use Double buffering
-  DMAx->CR |= (DMA_SxCR_DBM);
-
-  // Set the Priority
-  DMAx->CR |= (DMA_SxCR_PL); // Highest
-
-  /* Periphery Source configuration */
-  DMAx->PAR = (uint32_t)&ADCx->DR; // Source of the Data to grab
-  DMAx->CR &= ~(DMA_SxCR_PSIZE);
-  DMAx->CR |= (DMA_SxCR_PSIZE_0);
-  // Keep the pointer incremenent constant
-  DMAx->CR &= ~(DMA_SxCR_PINC);
-
-  /* Memory Destination Configuration */
-  DMAx->M0AR =(uint32_t) &sample_buffer0;
-  DMAx->M1AR =(uint32_t) &sample_buffer1;
-  // In direct mode, MSIZE is forced by hardware to the
-  // same value as PSIZE as soon as bit EN= '1'.
-  DMAx->CR &= ~(DMA_SxCR_MSIZE);
-  DMAx->CR |= (DMA_SxCR_MSIZE_0);
-  // Increment the pointer
-  DMAx->CR |= (DMA_SxCR_MINC);
-
-  // Set the DMA as the flow controller
-  DMAx->CR &= ~(DMA_SxCR_PFCTRL);
-
-  // Enable the DMA transfer complete interrupt
-  DMAx->CR |= DMA_SxCR_TCIE;
-  DMAx->CR |= DMA_SxCR_TEIE;
-
-  // Set DMAx priority to 1
-  NVIC_SetPriority(DMA2_Stream0_IRQn,1);
-
-  // Enable DMAx interrupt
-  NVIC_EnableIRQ(DMA2_Stream0_IRQn);
-
-  // Enable the DMA
-  DMAx->CR  |= DMA_SxCR_EN;
-
-
-
-}
 
 /**
   * @brief   Main program
@@ -823,70 +356,29 @@ GPIOA->PUPDR |= (0x5<<4); /*no pul-up, no pull-down*/
   //GPIOD->ODR |=PORTD_15;
   LCD_print(&rgb_lcd, "I AM HERE");
   Delay(1000);
-  ADCx_Init(ADC1);
+  timer_init();
 
   LCD_clear(&rgb_lcd);
   LCD_print(&rgb_lcd, "I AM GROOT");
   Delay(1000);
-  //timer4_init();
-  //DMAx_Init(DMA2_Stream0,ADC1);
 
   LCD_clear(&rgb_lcd);
-  timer_init();
+  ADCx_Init(ADC1);
   LCD_print(&rgb_lcd, "I AM HERE AGAIN LOLOL");
   Delay(1000);
   USARTx_Init(USART2);
 
-   LCD_clear(&rgb_lcd);
-  //LCD_home(&rgb_lcd);
+  LCD_clear(&rgb_lcd);
   LCD_setCursor(&rgb_lcd, 0,0);
   LCD_noCursor(&rgb_lcd);
   LCD_noBlink(&rgb_lcd);
   float setpoint = 3071;
   //1float kp = 1;
   while(1){
-
-    while(counter == 0); // Wait till conversion is done
+    while(counter == 1);
     counter = 1;
-    //float temp = adc_value_to_temp(temp_value);
-    //float vref = adc_steps_per_volt(vref_value);
-    //float thermistor_res =10000/((4095.0/thermistor_value)-1.0);
-
-    //LCD_print(&rgb_lcd, "ADC: %d %4.2f\xDF%c", temp_value, temp, 'C');
-    //Delay(200);
-    LCD_setCursor(&rgb_lcd, 0,1);
-    //LCD_print(&rgb_lcd,"VREF: %d %4.2fV", vref_value,vref);
-    //Delay(200);
-    //LCD_setCursor(&rgb_lcd, 0,2);
-    LCD_print(&rgb_lcd,"THERM: %4d", thermistor_value);
-    Delay(200);
-    LCD_setCursor(&rgb_lcd, 0,2);
-    USART_print(USART2,"VALUE: %4d\r\n",thermistor_value);
-    LCD_print(&rgb_lcd,"THERM: %4d", thermistor_value);
-    //LCD_setCursor(&rgb_lcd, 0,3);
-   /* float steinhart;
-    steinhart = thermistor_res / 10000;     // (R/Ro)
-    steinhart = log(steinhart);                  // ln(R/Ro)
-    steinhart /= 3522;                   // 1/B * ln(R/Ro)
-    steinhart += 1.0 / (25 + 273.15); // + (1/To)
-    steinhart = 1.0 / steinhart;                 // Invert
-    steinhart -= 273.15;                         // convert to C
-    LCD_print(&rgb_lcd,"TTEMP: %4.2f", steinhart);*/
-    float error = setpoint-thermistor_value;
-    USART_print(USART2,"ERROR: %4.2f VALUE: %d\r\n",error,thermistor_value);
-   // float pTerm = kp * error;
- //   if(pTerm > 4095) pTerm = 4095;
- //   else if (pTerm < 0) pTerm = 0;
-   // long new_pTerm = map(pTerm,0,4095,0,999);
-
-    //long new_pTerm = map((4095-thermistor_value),0,4095,0,999);
-   // USART_print(USART2,"PTERM: %4d VALUE: %4d ERROR: \r\n",
-    //                  pTerm, thermistor_value, error);
-
-    //TIM4->CCR3=thermistor_value;
-    TIM4->CCR4=thermistor_value;
+    LCD_print(&rgb_lcd, "TEMP: %4d", temp_value);
     LCD_home(&rgb_lcd);
-    //  Delay(100);
   }
   return 0;
 }

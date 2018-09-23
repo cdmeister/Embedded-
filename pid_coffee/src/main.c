@@ -14,6 +14,7 @@
 #include "systick.h"
 #include "lcd.h"
 #include "usart.h"
+#include "pid.h"
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
@@ -563,23 +564,23 @@ GPIOA->PUPDR |= (0x5<<4); /*no pul-up, no pull-down*/
   LCD_setCursor(&rgb_lcd, 0,0);
   LCD_noCursor(&rgb_lcd);
   LCD_noBlink(&rgb_lcd);
-  float setpoint = 3071;
-  float kp = 1.0;
-  int i = 0;
+  SetTunings(1,0,0);
+  SetSetpoint(3000);
+  uint16_t i = 0;
+
   while(1){
 
     while(counter == 0); // Wait till conversion is done
     counter = 0;
 
     //LCD_print(&rgb_lcd, "TEMP: %4d", temp_value);
-    int error = setpoint- temp_value;
-    float prop = error * kp;
-    TIM4->CCR4 = i;
-    if(i == 4095 ) i = 0;
-    else i++;
+    i = Compute(temp_value);
+    TIM4->CCR4 = 4095-i;
+    //if(i == 4095 ) i = 0;
+    //else i++;
 
     //LCD_print(&rgb_lcd, "TEMP: %4d %d", temp_value,millis());
-    USART_print(USART2,"TEMP: %4d %d %4.2f %4d\r\n",(int)prop, millis(),prop, i);
+    USART_print(USART2,"TEMP: %4d %4d %4.2f \r\n", i, Setpoint, lastErr);
     //LCD_home(&rgb_lcd);
 
 
