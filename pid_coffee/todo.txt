@@ -1,0 +1,57 @@
+- Implement a small scale verion of the pid algorithm
+  - Try using a fan or something
+  - Use immersion heater as a small scale setup
+  - Maybe if you are bored, use a motor and learn about motors
+- Learn what an SSR is
+- Figure out SSR via pwm if possible or how to interface with it
+
+http://forum.arduino.cc/index.php?topic=284930.0
+
+https://www.instructables.com/id/AC-PWM-Dimmer-for-Arduino/
+
+https://electronics.stackexchange.com/questions/283223/ssr-ticking-when-controlling-heater
+
+https://electronics.stackexchange.com/questions/358783/light-bulbs-are-blinking-when-controlling-powerful-heater-with-pwm-via-ssr
+
+
+https://electronics.stackexchange.com/questions/233741/activating-ssr-for-an-ac-motor-via-pwm-input
+
+https://electronics.stackexchange.com/questions/310519/how-fast-can-i-cycle-an-ac-ssr
+
+https://electronics.stackexchange.com/questions/254195/is-a-25-amp-ssr-safe-to-use-in-a-circuit-that-draws-25-amps
+
+https://forum.allaboutcircuits.com/threads/switching-of-solid-state-relay-with-pwm.103911/
+
+https://forum.allaboutcircuits.com/threads/pwm-heating-element-frequency.77889/
+
+https://forum.arduino.cc/index.php?topic=356364.0
+
+http://forum.arduino.cc/index.php?topic=143620.0
+
+https://www.google.com/search?client=ubuntu&hs=SdV&channel=fs&ei=-k6fW4XBGsHc0wLW9aTYAw&q=pwm+ssr+heating+element&oq=ssr+pwm&gs_l=psy-ab.1.6.0i71l8.0.0..4828...0.0..0.0.0.......0......gws-wiz.hhQvf2yBAP4
+
+https://www.avrfreaks.net/forum/zero-crossing-ssr-pwm-methods
+
+https://electronics.stackexchange.com/questions/127064/what-are-some-problems-with-running-a-heating-element-in-pwm-mode
+
+Learn more about PID
+
+https://www.lakeshore.com/Documents/LSTC_appendixF_l.pdf
+
+iopscience.iop.org/article/10.1088/1757-899X/322/7/072020/pdf
+
+http://wescottdesign.com/articles/pid/pidWithoutAPhd.pdf
+
+http://www.micromouseonline.com/2016/02/06/pwm-basics-on-the-stm32-general-purpose-timers/
+
+http://brettbeauregard.com/blog/2011/04/improving-the-beginners-pid-introduction/
+
+https://visualgdb.com/tutorials/arm/stm32/adc/
+
+http://00xnor.blogspot.com/2014/01/7-stm32-f4-adc-dma-temperature-sensor.html
+
+https://tutorial.cytron.io/2012/06/22/pid-for-embedded-design/
+
+https://github.com/tcleg/PID_Controller/blob/master/C/pid_controller.c
+
+
