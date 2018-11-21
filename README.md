@@ -1,4 +1,4 @@
-Various Projects for STM32F4
+Various Projects for STM32F4 testing out ideas
 
 - assembly: low level code,arm assembly to blink led
 - blinky: simple project to get a led to blink on the board
